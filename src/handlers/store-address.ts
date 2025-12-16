@@ -4,8 +4,12 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import * as Joi from 'joi';
 
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(ddbClient);
+let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+let docClient = DynamoDBDocumentClient.from(ddbClient);
+
+export const setDocClient = (client: any) => {
+  docClient = client;
+};
 
 const schema = Joi.object({
   streetAddress: Joi.string().required(),

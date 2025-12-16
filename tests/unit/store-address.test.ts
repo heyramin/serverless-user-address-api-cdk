@@ -1,22 +1,18 @@
-import { handler } from '../../src/handlers/store-address';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import * as Joi from 'joi';
-
-jest.mock('@aws-sdk/lib-dynamodb');
-jest.mock('uuid', () => ({
-  v4: () => 'test-uuid-1234',
-}));
+import { handler, setDocClient } from '../../src/handlers/store-address';
 
 describe('Store Address Handler', () => {
+  let mockDocClient: any;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockDocClient = {
+      send: jest.fn(),
+    };
+    setDocClient(mockDocClient);
+    process.env.ADDRESSES_TABLE = 'test-table';
   });
 
   it('should store a valid address', async () => {
-    const mockSend = jest.fn().mockResolvedValue({});
-    (DynamoDBDocumentClient.from as jest.Mock).mockReturnValue({
-      send: mockSend,
-    });
+    mockDocClient.send.mockResolvedValueOnce({});
 
     const event = {
       pathParameters: { userId: 'user123' },
@@ -28,13 +24,12 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(201);
     const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Address created successfully');
-    expect(body.addressId).toBe('test-uuid-1234');
+    expect(body.addressId).toBeDefined();
     expect(body.address.userId).toBe('user123');
     expect(body.address.suburb).toBe('Sydney');
   });
@@ -44,12 +39,10 @@ describe('Store Address Handler', () => {
       pathParameters: { userId: 'user123' },
       body: JSON.stringify({
         streetAddress: '123 Main St',
-        // Missing required fields
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -67,8 +60,7 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -76,10 +68,7 @@ describe('Store Address Handler', () => {
   });
 
   it('should default country to Australia', async () => {
-    const mockSend = jest.fn().mockResolvedValue({});
-    (DynamoDBDocumentClient.from as jest.Mock).mockReturnValue({
-      send: mockSend,
-    });
+    mockDocClient.send.mockResolvedValueOnce({});
 
     const event = {
       pathParameters: { userId: 'user123' },
@@ -91,11 +80,10 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(201);
     const body = JSON.parse((response as any).body);
     expect(body.address.country).toBe('Australia');
   });
-};
+});

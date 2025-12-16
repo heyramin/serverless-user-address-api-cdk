@@ -22,7 +22,11 @@ import * as AWS from 'aws-sdk';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
-const dynamodb = new AWS.DynamoDB.DocumentClient();
+let dynamodb = new AWS.DynamoDB.DocumentClient();
+
+export const setDynamoDBClient = (client: any) => {
+  dynamodb = client;
+};
 
 interface ClientRequest {
   clientName: string;

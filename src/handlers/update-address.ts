@@ -2,8 +2,12 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(ddbClient);
+let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+let docClient = DynamoDBDocumentClient.from(ddbClient);
+
+export const setDocClient = (client: any) => {
+  docClient = client;
+};
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {

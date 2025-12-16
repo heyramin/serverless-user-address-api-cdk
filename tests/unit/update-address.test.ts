@@ -1,11 +1,14 @@
-import { handler } from '../../src/handlers/update-address';
-import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-
-jest.mock('@aws-sdk/lib-dynamodb');
+import { handler, setDocClient } from '../../src/handlers/update-address';
 
 describe('Update Address Handler', () => {
+  let mockDocClient: any;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockDocClient = {
+      send: jest.fn(),
+    };
+    setDocClient(mockDocClient);
+    process.env.ADDRESSES_TABLE = 'test-table';
   });
 
   it('should update an address with new values', async () => {
@@ -21,9 +24,7 @@ describe('Update Address Handler', () => {
       updatedAt: '2024-01-15T12:00:00Z',
     };
 
-    (DynamoDBDocumentClient.from as jest.Mock).mockReturnValue({
-      send: jest.fn().mockResolvedValue({ Attributes: updatedAddress }),
-    });
+    mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
@@ -32,8 +33,7 @@ describe('Update Address Handler', () => {
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(200);
     const body = JSON.parse((response as any).body);
@@ -48,8 +48,7 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({}),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -62,8 +61,7 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -76,8 +74,7 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -97,9 +94,7 @@ describe('Update Address Handler', () => {
       updatedAt: '2024-01-15T12:00:00Z',
     };
 
-    (DynamoDBDocumentClient.from as jest.Mock).mockReturnValue({
-      send: jest.fn().mockResolvedValue({ Attributes: updatedAddress }),
-    });
+    mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
@@ -111,8 +106,7 @@ describe('Update Address Handler', () => {
       }),
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(200);
     const body = JSON.parse((response as any).body);

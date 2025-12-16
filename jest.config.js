@@ -11,7 +11,13 @@ module.exports = {
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
       testEnvironment: 'node',
       preset: 'ts-jest',
-      testTimeout: 60000,
+      globals: {
+        'ts-jest': {
+          tsconfig: {
+            // Override for integration tests
+          },
+        },
+      },
     },
   ],
   collectCoverageFrom: [
@@ -20,3 +26,4 @@ module.exports = {
     '!dist/**',
   ],
 };
+

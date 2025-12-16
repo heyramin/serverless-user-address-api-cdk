@@ -1,25 +1,25 @@
-import { handler } from '../../src/handlers/delete-address';
-import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-
-jest.mock('@aws-sdk/lib-dynamodb');
+import { handler, setDocClient } from '../../src/handlers/delete-address';
 
 describe('Delete Address Handler', () => {
+  let mockDocClient: any;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockDocClient = {
+      send: jest.fn(),
+    };
+    setDocClient(mockDocClient);
+    process.env.ADDRESSES_TABLE = 'test-table';
   });
 
   it('should delete an address successfully', async () => {
-    (DynamoDBDocumentClient.from as jest.Mock).mockReturnValue({
-      send: jest.fn().mockResolvedValue({}),
-    });
+    mockDocClient.send.mockResolvedValueOnce({});
 
     const event = {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
       body: null,
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(204);
     expect((response as any).body).toBe('');
@@ -31,8 +31,7 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -45,8 +44,7 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
@@ -59,8 +57,7 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const context = {} as any;
-    const response = await handler(event, context);
+    const response = await (handler as any)(event);
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
