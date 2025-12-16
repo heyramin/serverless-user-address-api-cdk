@@ -24,7 +24,7 @@ export class UserAddressApiStack extends cdk.Stack {
 
     const env = props.environment;
 
-    // Create KMS key for encryption
+    // Create KMS key for encryption (shared by all DynamoDB tables in this stack)
     this.kmsKey = new kms.Key(this, 'AddressesTableKey', {
       description: 'KMS key for DynamoDB encryption',
       enableKeyRotation: true,
@@ -32,41 +32,8 @@ export class UserAddressApiStack extends cdk.Stack {
       pendingWindow: cdk.Duration.days(7), // 7-day waiting period for key deletion
     });
 
-    // Add alias for easier identification
-    this.kmsKey.addAlias(`alias/dynamodb-${env}`);
-
-    // Add resource policy for DynamoDB service to use the key
-    this.kmsKey.addToResourcePolicy(
-      new iam.PolicyStatement({
-        sid: 'Allow DynamoDB to use the key',
-        principals: [new iam.ServicePrincipal('dynamodb.amazonaws.com')],
-        actions: [
-          'kms:Decrypt',
-          'kms:GenerateDataKey',
-          'kms:DescribeKey',
-        ],
-        resources: ['*'],
-        conditions: {
-          StringEquals: {
-            'kms:CallerAccount': this.account,
-            'kms:ViaService': `dynamodb.${this.region}.amazonaws.com`,
-          },
-        },
-      })
-    );
-
-    // Allow github-actions IAM user to decrypt for integration tests
-    this.kmsKey.addToResourcePolicy(
-      new iam.PolicyStatement({
-        sid: 'Allow github-actions user to decrypt',
-        principals: [new iam.ArnPrincipal(`arn:aws:iam::${this.account}:user/github-actions`)],
-        actions: [
-          'kms:Decrypt',
-          'kms:DescribeKey',
-        ],
-        resources: ['*'],
-      })
-    );
+    // Add alias for easier identification (reflects shared use across multiple tables)
+    this.kmsKey.addAlias(`alias/user-address-api-${env}`);
 
     // Create DynamoDB table for addresses
     this.table = new dynamodb.Table(this, 'AddressesTable', {
