@@ -192,7 +192,7 @@ export class UserAddressApiStack extends cdk.Stack {
         CLIENTS_TABLE: `user-address-clients-${env}`,
       },
       bundling: {
-        externalModules: ['aws-sdk'],
+        nodeModules: ['aws-sdk'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -230,6 +230,9 @@ export class UserAddressApiStack extends cdk.Stack {
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
       },
+      bundling: {
+        nodeModules: ['aws-sdk'],
+      },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
@@ -247,6 +250,9 @@ export class UserAddressApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
+      },
+      bundling: {
+        nodeModules: ['aws-sdk'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -266,6 +272,9 @@ export class UserAddressApiStack extends cdk.Stack {
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
       },
+      bundling: {
+        nodeModules: ['aws-sdk'],
+      },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
@@ -282,6 +291,9 @@ export class UserAddressApiStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       environment: {
         CLIENT_TABLE_NAME: this.clientsTable.tableName,
+      },
+      bundling: {
+        nodeModules: ['aws-sdk'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
