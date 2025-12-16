@@ -1,0 +1,34 @@
+name: Bootstrap CDK
+
+on:
+  workflow_dispatch
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-2
+
+      - name: Bootstrap CDK for dev
+        run: npx cdk bootstrap --context environment=dev
+
+      - name: Bootstrap CDK for prod
+        run: npx cdk bootstrap --context environment=prod
