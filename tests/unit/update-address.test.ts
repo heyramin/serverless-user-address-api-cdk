@@ -20,6 +20,7 @@ describe('Update Address Handler', () => {
       state: 'NSW',
       postcode: '2000',
       country: 'Australia',
+      addressType: 'mailing',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-15T12:00:00Z',
     };
@@ -30,6 +31,7 @@ describe('Update Address Handler', () => {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
       body: JSON.stringify({
         street: '789 New St',
+        addressType: 'mailing',
       }),
     } as any;
 
@@ -85,11 +87,12 @@ describe('Update Address Handler', () => {
     const updatedAddress = {
       userId: 'user123',
       addressId: 'addr1',
-      streetAddress: '789 New St',
+      street: '789 New St',
       suburb: 'Melbourne',
       state: 'VIC',
       postcode: '3000',
       country: 'Australia',
+      addressType: 'business',
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-15T12:00:00Z',
     };
@@ -99,10 +102,11 @@ describe('Update Address Handler', () => {
     const event = {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
       body: JSON.stringify({
-        streetAddress: '789 New St',
+        street: '789 New St',
         suburb: 'Melbourne',
         state: 'VIC',
         postcode: '3000',
+        addressType: 'business',
       }),
     } as any;
 

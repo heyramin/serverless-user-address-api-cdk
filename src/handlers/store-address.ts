@@ -17,6 +17,7 @@ const schema = Joi.object({
   state: Joi.string().required(),
   postcode: Joi.string().required(),
   country: Joi.string().default('Australia'),
+  addressType: Joi.string().valid('billing', 'mailing', 'residential', 'business').optional(),
 });
 
 interface Address {
@@ -27,6 +28,7 @@ interface Address {
   state: string;
   postcode: string;
   country: string;
+  addressType?: string;
   createdAt: string;
   updatedAt: string;
 }

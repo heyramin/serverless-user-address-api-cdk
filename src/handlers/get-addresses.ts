@@ -17,6 +17,7 @@ interface Address {
   state: string;
   postcode: string;
   country: string;
+  addressType?: string;
   createdAt: string;
   updatedAt: string;
 }

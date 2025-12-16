@@ -33,6 +33,7 @@ describe('User Address API Integration Tests', () => {
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
+        addressType: 'residential',
       });
 
       expect(response.status).toBe(201);
@@ -61,6 +62,7 @@ describe('User Address API Integration Tests', () => {
         suburb: 'Melbourne',
         state: 'VIC',
         postcode: '3000',
+        addressType: 'billing',
       });
 
       expect(response.status).toBe(201);
@@ -162,6 +164,7 @@ describe('User Address API Integration Tests', () => {
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
+        addressType: 'mailing',
       });
 
       expect(response.status).toBe(401);
@@ -182,6 +185,7 @@ describe('User Address API Integration Tests', () => {
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
+        addressType: 'business',
       });
 
       expect(response.status).toBe(401);

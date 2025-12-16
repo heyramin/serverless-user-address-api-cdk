@@ -201,6 +201,10 @@ components:
           type: string
           default: Australia
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
         createdAt:
           type: string
           format: date-time
@@ -234,6 +238,10 @@ components:
           type: string
           default: Australia
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
 
     AddressUpdate:
       type: object
@@ -253,6 +261,10 @@ components:
         country:
           type: string
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
 
     AddressResponse:
       type: object

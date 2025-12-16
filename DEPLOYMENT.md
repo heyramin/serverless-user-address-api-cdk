@@ -95,7 +95,8 @@ curl -X POST $API_ENDPOINT/users/user123/addresses \
     "street": "123 Main St",
     "suburb": "Sydney",
     "state": "NSW",
-    "postcode": "2000"
+    "postcode": "2000",
+    "addressType": "residential"
   }'
 
 # Retrieve addresses

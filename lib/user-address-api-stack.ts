@@ -55,6 +55,7 @@ export class UserAddressApiStack extends cdk.Stack {
     });
 
     // Add GSI for suburb/postcode filtering
+    // Note: addressType field is now supported but doesn't require a GSI unless filtering by address type is needed
     this.table.addGlobalSecondaryIndex({
       indexName: 'suburbIndex',
       partitionKey: {
