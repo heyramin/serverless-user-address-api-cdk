@@ -54,7 +54,7 @@ describe('Update Address Handler', () => {
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
-    expect(body.message).toBe('No fields to update');
+    expect(body.message).toBe('"value" must have at least 1 key');
   });
 
   it('should return 400 for missing userId', async () => {
