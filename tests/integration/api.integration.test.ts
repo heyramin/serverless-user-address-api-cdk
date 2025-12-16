@@ -1,11 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
+import * as AWS from 'aws-sdk';
 
 describe('User Address API Integration Tests', () => {
   let api: AxiosInstance;
   let userId: string;
   let addressId: string;
+  let addressIds: string[] = []; // Track all created addresses for cleanup
   const clientId = process.env.TEST_CLIENT_ID || 'test-client';
   const clientSecret = process.env.TEST_CLIENT_SECRET || 'test-secret';
+  const awsRegion = process.env.AWS_REGION || 'ap-southeast-2';
+  let dynamodb: AWS.DynamoDB.DocumentClient;
 
   beforeAll(() => {
     const apiEndpoint = process.env.API_ENDPOINT;
@@ -24,6 +28,44 @@ describe('User Address API Integration Tests', () => {
     });
 
     userId = `test-user-${Date.now()}`;
+    
+    // Initialize DynamoDB client for cleanup
+    dynamodb = new AWS.DynamoDB.DocumentClient({ region: awsRegion });
+  });
+
+  afterAll(async () => {
+    // Clean up test data from DynamoDB
+    try {
+      // Delete all created addresses
+      for (const addrId of addressIds) {
+        await dynamodb
+          .delete({
+            TableName: process.env.ADDRESSES_TABLE || 'user-addresses-dev',
+            Key: { userId, addressId: addrId },
+          })
+          .promise();
+      }
+      console.log(`✓ Cleaned up ${addressIds.length} test addresses`);
+
+      // Delete test client if it was created during tests
+      if (clientId.startsWith('cli_')) {
+        try {
+          await dynamodb
+            .delete({
+              TableName: process.env.CLIENTS_TABLE || 'user-address-clients-dev',
+              Key: { clientId },
+            })
+            .promise();
+          console.log('✓ Cleaned up test client credentials');
+        } catch (error: any) {
+          // Client might not exist if it was provided externally
+          console.log('ℹ Test client cleanup skipped (not found or not created by tests)');
+        }
+      }
+    } catch (error) {
+      console.error('Error during test cleanup:', error);
+      // Don't fail tests if cleanup fails
+    }
   });
 
   describe('POST /v1/users/{userId}/addresses', () => {
@@ -44,6 +86,7 @@ describe('User Address API Integration Tests', () => {
       expect(response.data.address.suburb).toBe('Sydney');
 
       addressId = response.data.addressId;
+      addressIds.push(addressId); // Track for cleanup
     });
 
     it('should return 400 for missing required fields', async () => {
@@ -67,6 +110,7 @@ describe('User Address API Integration Tests', () => {
 
       expect(response.status).toBe(201);
       expect(response.data.address.country).toBe('Australia');
+      addressIds.push(response.data.addressId); // Track for cleanup
     });
   });
 
