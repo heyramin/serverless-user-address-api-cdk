@@ -73,8 +73,32 @@ jobs:
           echo "API_ENDPOINT=$API_ENDPOINT" >> $GITHUB_OUTPUT
           echo "API endpoint: $API_ENDPOINT"
 
+      - name: Create test client credentials
+        id: creds
+        run: |
+          INIT_CLIENT_FUNCTION=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-dev --query 'Stacks[0].Outputs[?OutputKey==`InitClientFunctionName`].OutputValue' --output text --region ap-southeast-2)
+          
+          PAYLOAD=$(echo -n '{"clientName":"Integration Test Client","description":"For CI/CD integration tests"}' | base64 -w 0)
+          
+          aws lambda invoke \
+            --function-name $INIT_CLIENT_FUNCTION \
+            --payload $PAYLOAD \
+            --region ap-southeast-2 \
+            /tmp/response.json
+          
+          RESPONSE=$(cat /tmp/response.json)
+          
+          TEST_CLIENT_ID=$(echo $RESPONSE | grep -o '"clientId":"[^"]*' | cut -d'"' -f4)
+          TEST_CLIENT_SECRET=$(echo $RESPONSE | grep -o '"clientSecret":"[^"]*' | cut -d'"' -f4)
+          
+          echo "test_client_id=$TEST_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "test_client_secret=$TEST_CLIENT_SECRET" >> $GITHUB_OUTPUT
+          echo "Test client created: $TEST_CLIENT_ID"
+
       - name: Run integration tests
         env:
           API_ENDPOINT: ${{ steps.api.outputs.API_ENDPOINT }}
+          TEST_CLIENT_ID: ${{ steps.creds.outputs.test_client_id }}
+          TEST_CLIENT_SECRET: ${{ steps.creds.outputs.test_client_secret }}
           AWS_REGION: ap-southeast-2
         run: npm run test:integration
