@@ -185,7 +185,7 @@ components:
         userId:
           type: string
           description: User ID associated with this address
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:
@@ -213,12 +213,12 @@ components:
     AddressInput:
       type: object
       required:
-        - streetAddress
+        - street
         - suburb
         - state
         - postcode
       properties:
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:
@@ -238,7 +238,7 @@ components:
     AddressUpdate:
       type: object
       properties:
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:

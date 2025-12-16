@@ -26,9 +26,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const updates: string[] = [];
     const values: Record<string, any> = {};
 
-    if (body.streetAddress) {
-      updates.push('streetAddress = :streetAddress');
-      values[':streetAddress'] = body.streetAddress;
+    if (body.street) {
+      updates.push('street = :street');
+      values[':street'] = body.street;
     }
     if (body.suburb) {
       updates.push('suburb = :suburb');

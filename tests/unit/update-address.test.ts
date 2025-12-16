@@ -15,7 +15,7 @@ describe('Update Address Handler', () => {
     const updatedAddress = {
       userId: 'user123',
       addressId: 'addr1',
-      streetAddress: '789 New St',
+      street: '789 New St',
       suburb: 'Sydney',
       state: 'NSW',
       postcode: '2000',
@@ -29,7 +29,7 @@ describe('Update Address Handler', () => {
     const event = {
       pathParameters: { userId: 'user123', addressId: 'addr1' },
       body: JSON.stringify({
-        streetAddress: '789 New St',
+        street: '789 New St',
       }),
     } as any;
 
@@ -39,7 +39,7 @@ describe('Update Address Handler', () => {
     const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Address updated successfully');
     expect(body.addressId).toBe('addr1');
-    expect(body.address.streetAddress).toBe('789 New St');
+    expect(body.address.street).toBe('789 New St');
   });
 
   it('should return 400 when no fields to update', async () => {

@@ -12,7 +12,7 @@ export const setDocClient = (client: any) => {
 };
 
 const schema = Joi.object({
-  streetAddress: Joi.string().required(),
+  street: Joi.string().required(),
   suburb: Joi.string().required(),
   state: Joi.string().required(),
   postcode: Joi.string().required(),
@@ -22,7 +22,7 @@ const schema = Joi.object({
 interface Address {
   userId: string;
   addressId: string;
-  streetAddress: string;
+  street: string;
   suburb: string;
   state: string;
   postcode: string;
