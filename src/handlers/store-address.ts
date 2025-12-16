@@ -3,6 +3,13 @@ import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import * as Joi from 'joi';
+import { 
+  isValidUserId, 
+  isValidStreetAddress, 
+  isValidSuburb, 
+  isValidState,
+  isValidCountry 
+} from '../utils/validation';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -12,18 +19,66 @@ export const setDocClient = (client: any) => {
 };
 
 const schema = Joi.object({
-  street: Joi.string().required(),
-  suburb: Joi.string().required(),
-  state: Joi.string().required(),
-  postcode: Joi.string().required(),
-  country: Joi.string().default('Australia'),
-  addressType: Joi.string().valid('billing', 'mailing', 'residential', 'business').optional(),
+  streetAddress: Joi.string()
+    .required()
+    .min(1)
+    .max(256)
+    .custom((value, helpers) => {
+      if (!isValidStreetAddress(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .messages({
+      'any.invalid': 'streetAddress can only contain letters, numbers, spaces, hyphens, apostrophes, periods, commas, and # symbols'
+    }),
+  suburb: Joi.string()
+    .required()
+    .min(1)
+    .max(128)
+    .custom((value, helpers) => {
+      if (!isValidSuburb(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .messages({
+      'any.invalid': 'suburb can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    }),
+  state: Joi.string()
+    .required()
+    .custom((value, helpers) => {
+      if (!isValidState(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .messages({
+      'any.invalid': 'state must be a valid Australian state code (NSW, VIC, QLD, WA, SA, TAS, ACT, NT)'
+    }),
+  postcode: Joi.string()
+    .required()
+    .pattern(/^\d{4}$/),
+  country: Joi.string()
+    .default('Australia')
+    .custom((value, helpers) => {
+      if (!isValidCountry(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
+    .messages({
+      'any.invalid': 'country can only contain letters, numbers, spaces, hyphens, and apostrophes'
+    }),
+  addressType: Joi.string()
+    .valid('billing', 'mailing', 'residential', 'business')
+    .optional(),
 });
 
 interface Address {
   userId: string;
   addressId: string;
-  street: string;
+  streetAddress: string;
   suburb: string;
   state: string;
   postcode: string;
@@ -42,6 +97,16 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return {
         statusCode: 400,
         body: JSON.stringify({ message: 'Missing userId' }),
+      };
+    }
+
+    // Validate userId format (prevent SQL injection)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
       };
     }
 

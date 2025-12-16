@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import { isValidUserId } from '../utils/validation';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -12,7 +13,7 @@ export const setDocClient = (client: any) => {
 interface Address {
   userId: string;
   addressId: string;
-  street: string;
+  streetAddress: string;
   suburb: string;
   state: string;
   postcode: string;
@@ -32,6 +33,16 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return {
         statusCode: 400,
         body: JSON.stringify({ message: 'Missing userId' }),
+      };
+    }
+
+    // Validate userId format (prevent SQL injection)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
       };
     }
 

@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import { isValidUserId, isValidAddressId } from '../utils/validation';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -22,15 +23,34 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Validate userId and addressId format (prevent injection attacks)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
+    if (!isValidAddressId(addressId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid addressId format. Must be a valid UUID.' 
+        }),
+      };
+    }
+
     // Build update expression dynamically
     const updates: string[] = [];
     const values: Record<string, any> = {};
     const names: Record<string, string> = {};
 
-    if (body.street) {
-      updates.push('#street = :street');
-      names['#street'] = 'street';
-      values[':street'] = body.street;
+    if (body.streetAddress) {
+      updates.push('#streetAddress = :streetAddress');
+      names['#streetAddress'] = 'streetAddress';
+      values[':streetAddress'] = body.streetAddress;
     }
     if (body.suburb) {
       updates.push('#suburb = :suburb');

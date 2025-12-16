@@ -71,7 +71,7 @@ describe('User Address API Integration Tests', () => {
   describe('POST /v1/users/{userId}/addresses', () => {
     it('should create a new address', async () => {
       const response = await api.post(`/v1/users/${userId}/addresses`, {
-        street: '123 Test Street',
+        streetAddress: '123 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -91,7 +91,7 @@ describe('User Address API Integration Tests', () => {
 
     it('should return 400 for missing required fields', async () => {
       const response = await api.post(`/v1/users/${userId}/addresses`, {
-        street: '123 Test Street',
+        streetAddress: '123 Test Street',
         // Missing required fields
       });
 
@@ -101,7 +101,7 @@ describe('User Address API Integration Tests', () => {
 
     it('should default country to Australia', async () => {
       const response = await api.post(`/v1/users/${userId}/addresses`, {
-        street: '456 Another Street',
+        streetAddress: '456 Another Street',
         suburb: 'Melbourne',
         state: 'VIC',
         postcode: '3000',
