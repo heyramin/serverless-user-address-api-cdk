@@ -86,10 +86,24 @@ jobs:
             --region ap-southeast-2 \
             /tmp/response.json
           
+          # Check if Lambda returned an error
+          if grep -q "FunctionError" /tmp/response.json; then
+            echo "Lambda returned an error:"
+            cat /tmp/response.json
+            exit 1
+          fi
+          
           RESPONSE=$(cat /tmp/response.json)
+          echo "Lambda response: $RESPONSE"
           
           TEST_CLIENT_ID=$(echo $RESPONSE | grep -o '"clientId":"[^"]*' | cut -d'"' -f4)
           TEST_CLIENT_SECRET=$(echo $RESPONSE | grep -o '"clientSecret":"[^"]*' | cut -d'"' -f4)
+          
+          if [ -z "$TEST_CLIENT_ID" ] || [ -z "$TEST_CLIENT_SECRET" ]; then
+            echo "Failed to extract credentials from Lambda response"
+            echo "Full response: $RESPONSE"
+            exit 1
+          fi
           
           echo "test_client_id=$TEST_CLIENT_ID" >> $GITHUB_OUTPUT
           echo "test_client_secret=$TEST_CLIENT_SECRET" >> $GITHUB_OUTPUT
