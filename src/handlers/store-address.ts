@@ -12,21 +12,23 @@ export const setDocClient = (client: any) => {
 };
 
 const schema = Joi.object({
-  streetAddress: Joi.string().required(),
+  street: Joi.string().required(),
   suburb: Joi.string().required(),
   state: Joi.string().required(),
   postcode: Joi.string().required(),
   country: Joi.string().default('Australia'),
+  addressType: Joi.string().valid('billing', 'mailing', 'residential', 'business').optional(),
 });
 
 interface Address {
   userId: string;
   addressId: string;
-  streetAddress: string;
+  street: string;
   suburb: string;
   state: string;
   postcode: string;
   country: string;
+  addressType?: string;
   createdAt: string;
   updatedAt: string;
 }

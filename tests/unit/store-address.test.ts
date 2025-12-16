@@ -38,7 +38,7 @@ describe('Store Address Handler', () => {
     const event = {
       pathParameters: { userId: 'user123' },
       body: JSON.stringify({
-        streetAddress: '123 Main St',
+        street: '123 Main St',
       }),
     } as any;
 
@@ -53,7 +53,7 @@ describe('Store Address Handler', () => {
     const event = {
       pathParameters: {},
       body: JSON.stringify({
-        streetAddress: '123 Main St',
+        street: '123 Main St',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -73,10 +73,11 @@ describe('Store Address Handler', () => {
     const event = {
       pathParameters: { userId: 'user123' },
       body: JSON.stringify({
-        streetAddress: '123 Main St',
+        street: '123 Main St',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
+        addressType: 'residential',
       }),
     } as any;
 

@@ -12,11 +12,12 @@ export const setDocClient = (client: any) => {
 interface Address {
   userId: string;
   addressId: string;
-  streetAddress: string;
+  street: string;
   suburb: string;
   state: string;
   postcode: string;
   country: string;
+  addressType?: string;
   createdAt: string;
   updatedAt: string;
 }

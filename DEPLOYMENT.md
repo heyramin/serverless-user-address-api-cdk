@@ -92,10 +92,11 @@ curl -X POST $API_ENDPOINT/users/user123/addresses \
   -H "Authorization: Basic $(echo -n 'clientId:clientSecret' | base64)" \
   -H "Content-Type: application/json" \
   -d '{
-    "streetAddress": "123 Main St",
+    "street": "123 Main St",
     "suburb": "Sydney",
     "state": "NSW",
-    "postcode": "2000"
+    "postcode": "2000",
+    "addressType": "residential"
   }'
 
 # Retrieve addresses

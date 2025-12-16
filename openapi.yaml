@@ -185,7 +185,7 @@ components:
         userId:
           type: string
           description: User ID associated with this address
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:
@@ -201,6 +201,10 @@ components:
           type: string
           default: Australia
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
         createdAt:
           type: string
           format: date-time
@@ -213,12 +217,12 @@ components:
     AddressInput:
       type: object
       required:
-        - streetAddress
+        - street
         - suburb
         - state
         - postcode
       properties:
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:
@@ -234,11 +238,15 @@ components:
           type: string
           default: Australia
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
 
     AddressUpdate:
       type: object
       properties:
-        streetAddress:
+        street:
           type: string
           description: Street address line
         suburb:
@@ -253,6 +261,10 @@ components:
         country:
           type: string
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
 
     AddressResponse:
       type: object

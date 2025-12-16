@@ -26,13 +26,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const updates: string[] = [];
     const values: Record<string, any> = {};
 
-    if (body.streetAddress) {
-      updates.push('streetAddress = :streetAddress');
-      values[':streetAddress'] = body.streetAddress;
+    if (body.street) {
+      updates.push('street = :street');
+      values[':street'] = body.street;
     }
-    if (body.suburb) {
-      updates.push('suburb = :suburb');
-      values[':suburb'] = body.suburb;
+    if (body.addressType) {
+      if (!['billing', 'mailing', 'residential', 'business'].includes(body.addressType)) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ message: 'Invalid addressType. Must be one of: billing, mailing, residential, business' }),
+        };
+      }
+      updates.push('addressType = :addressType');
+      values[':addressType'] = body.addressType;
     }
     if (body.state) {
       updates.push('state = :state');

@@ -16,7 +16,7 @@ describe('Get Addresses Handler', () => {
       {
         userId: 'user123',
         addressId: 'addr1',
-        streetAddress: '123 Main St',
+        street: '123 Main St',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -27,11 +27,12 @@ describe('Get Addresses Handler', () => {
       {
         userId: 'user123',
         addressId: 'addr2',
-        streetAddress: '456 Oak Ave',
+        street: '456 Oak Ave',
         suburb: 'Melbourne',
         state: 'VIC',
         postcode: '3000',
         country: 'Australia',
+        addressType: 'billing',
         createdAt: '2024-01-02T00:00:00Z',
         updatedAt: '2024-01-02T00:00:00Z',
       },
@@ -58,7 +59,7 @@ describe('Get Addresses Handler', () => {
       {
         userId: 'user123',
         addressId: 'addr1',
-        streetAddress: '123 Main St',
+        street: '123 Main St',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -88,7 +89,7 @@ describe('Get Addresses Handler', () => {
       {
         userId: 'user123',
         addressId: 'addr1',
-        streetAddress: '123 Main St',
+        street: '123 Main St',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
