@@ -181,10 +181,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createAuthorizerFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'AuthorizerFunction', {
+    const fn = new NodejsFunction(this, 'AuthorizerFunction', {
+      entry: path.join(__dirname, '../src/handlers/authorize.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'authorize.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         CLIENTS_TABLE: `user-address-clients-${env}`,
@@ -199,10 +199,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createStoreAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'StoreAddressFunction', {
+    const fn = new NodejsFunction(this, 'StoreAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/store-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'store-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -217,10 +217,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createGetAddressesFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'GetAddressesFunction', {
+    const fn = new NodejsFunction(this, 'GetAddressesFunction', {
+      entry: path.join(__dirname, '../src/handlers/get-addresses.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'get-addresses.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -235,10 +235,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createUpdateAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'UpdateAddressFunction', {
+    const fn = new NodejsFunction(this, 'UpdateAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/update-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'update-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -253,10 +253,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createDeleteAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'DeleteAddressFunction', {
+    const fn = new NodejsFunction(this, 'DeleteAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/delete-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'delete-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
