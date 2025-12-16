@@ -287,3 +287,4 @@ export class UserAddressApiStack extends cdk.Stack {
 
     return fn;
   }
+}
