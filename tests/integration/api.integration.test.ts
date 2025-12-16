@@ -26,9 +26,9 @@ describe('User Address API Integration Tests', () => {
     userId = `test-user-${Date.now()}`;
   });
 
-  describe('POST /users/{userId}/addresses', () => {
+  describe('POST /v1/users/{userId}/addresses', () => {
     it('should create a new address', async () => {
-      const response = await api.post(`/users/${userId}/addresses`, {
+      const response = await api.post(`/v1/users/${userId}/addresses`, {
         streetAddress: '123 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
@@ -46,7 +46,7 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should return 400 for missing required fields', async () => {
-      const response = await api.post(`/users/${userId}/addresses`, {
+      const response = await api.post(`/v1/users/${userId}/addresses`, {
         streetAddress: '123 Test Street',
         // Missing required fields
       });
@@ -56,7 +56,7 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should default country to Australia', async () => {
-      const response = await api.post(`/users/${userId}/addresses`, {
+      const response = await api.post(`/v1/users/${userId}/addresses`, {
         streetAddress: '456 Another Street',
         suburb: 'Melbourne',
         state: 'VIC',
@@ -68,9 +68,9 @@ describe('User Address API Integration Tests', () => {
     });
   });
 
-  describe('GET /users/{userId}/addresses', () => {
+  describe('GET /v1/users/{userId}/addresses', () => {
     it('should retrieve all addresses for a user', async () => {
-      const response = await api.get(`/users/${userId}/addresses`);
+      const response = await api.get(`/v1/users/${userId}/addresses`);
 
       expect(response.status).toBe(200);
       expect(response.data.message).toBe('Addresses retrieved successfully');
@@ -79,7 +79,7 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should filter addresses by suburb', async () => {
-      const response = await api.get(`/users/${userId}/addresses?suburb=Sydney`);
+      const response = await api.get(`/v1/users/${userId}/addresses?suburb=Sydney`);
 
       expect(response.status).toBe(200);
       expect(response.data.addresses).toBeDefined();
@@ -89,7 +89,7 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should filter addresses by postcode', async () => {
-      const response = await api.get(`/users/${userId}/addresses?postcode=2000`);
+      const response = await api.get(`/v1/users/${userId}/addresses?postcode=2000`);
 
       expect(response.status).toBe(200);
       expect(response.data.addresses).toBeDefined();
@@ -99,16 +99,16 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should return empty array for non-existent user', async () => {
-      const response = await api.get(`/users/non-existent-user/addresses`);
+      const response = await api.get(`/v1/users/non-existent-user/addresses`);
 
       expect(response.status).toBe(200);
       expect(response.data.addresses).toEqual([]);
     });
   });
 
-  describe('PATCH /users/{userId}/addresses/{addressId}', () => {
+  describe('PATCH /v1/users/{userId}/addresses/{addressId}', () => {
     it('should update an address', async () => {
-      const response = await api.patch(`/users/${userId}/addresses/${addressId}`, {
+      const response = await api.patch(`/v1/users/${userId}/addresses/${addressId}`, {
         suburb: 'Parramatta',
         state: 'NSW',
       });
@@ -120,14 +120,14 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should return 400 when no fields to update', async () => {
-      const response = await api.patch(`/users/${userId}/addresses/${addressId}`, {});
+      const response = await api.patch(`/v1/users/${userId}/addresses/${addressId}`, {});
 
       expect(response.status).toBe(400);
       expect(response.data.message).toBe('No fields to update');
     });
 
     it('should return 400 for missing addressId', async () => {
-      const response = await api.patch(`/users/${userId}/addresses/non-existent`, {
+      const response = await api.patch(`/v1/users/${userId}/addresses/non-existent`, {
         suburb: 'Brisbane',
       });
 
@@ -137,14 +137,14 @@ describe('User Address API Integration Tests', () => {
 
   describe('DELETE /users/{userId}/addresses/{addressId}', () => {
     it('should delete an address', async () => {
-      const response = await api.delete(`/users/${userId}/addresses/${addressId}`);
+      const response = await api.delete(`/v1/users/${userId}/addresses/${addressId}`);
 
       expect(response.status).toBe(204);
       expect(response.data).toBe('');
     });
 
     it('should return 204 even if address does not exist', async () => {
-      const response = await api.delete(`/users/${userId}/addresses/non-existent`);
+      const response = await api.delete(`/v1/users/${userId}/addresses/non-existent`);
 
       expect(response.status).toBe(204);
     });
@@ -157,7 +157,7 @@ describe('User Address API Integration Tests', () => {
         validateStatus: () => true,
       });
 
-      const response = await unauthApi.post(`/users/${userId}/addresses`, {
+      const response = await unauthApi.post(`/v1/users/${userId}/addresses`, {
         streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
@@ -177,7 +177,7 @@ describe('User Address API Integration Tests', () => {
         validateStatus: () => true,
       });
 
-      const response = await invalidApi.post(`/users/${userId}/addresses`, {
+      const response = await invalidApi.post(`/v1/users/${userId}/addresses`, {
         streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',

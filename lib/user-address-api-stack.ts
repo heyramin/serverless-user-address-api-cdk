@@ -88,7 +88,7 @@ export class UserAddressApiStack extends cdk.Stack {
       description: 'User Address API',
       cloudWatchRole: true,
       deployOptions: {
-        stageName: 'v1',
+        stageName: env, // dev or prod
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: true,
         metricsEnabled: true,
@@ -110,31 +110,32 @@ export class UserAddressApiStack extends cdk.Stack {
     const deleteAddressFunction = this.createDeleteAddressFunction(env);
     const initClientFunction = this.createInitClientFunction(env);
 
-    // Create API endpoints
-    const usersResource = this.api.root.addResource('users');
+    // Create API endpoints with versioning
+    const versionResource = this.api.root.addResource('v1');
+    const usersResource = versionResource.addResource('users');
     const userIdResource = usersResource.addResource('{userId}');
     const addressesResource = userIdResource.addResource('addresses');
     const addressIdResource = addressesResource.addResource('{addressId}');
 
-    // POST /users/{id}/addresses
+    // POST /v1/users/{id}/addresses
     addressesResource.addMethod('POST', new apigateway.LambdaIntegration(storeAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // GET /users/{id}/addresses
+    // GET /v1/users/{id}/addresses
     addressesResource.addMethod('GET', new apigateway.LambdaIntegration(getAddressesFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // PATCH /users/{id}/addresses/{addressId}
+    // PATCH /v1/users/{id}/addresses/{addressId}
     addressIdResource.addMethod('PATCH', new apigateway.LambdaIntegration(updateAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // DELETE /users/{id}/addresses/{addressId}
+    // DELETE /v1/users/{id}/addresses/{addressId}
     addressIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
