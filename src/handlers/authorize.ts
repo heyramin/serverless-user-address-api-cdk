@@ -1,4 +1,18 @@
 import * as crypto from 'crypto';
+import * as AWS from 'aws-sdk';
+
+let dynamodb: AWS.DynamoDB.DocumentClient;
+
+function getDynamoDBClient() {
+  if (!dynamodb) {
+    dynamodb = new AWS.DynamoDB.DocumentClient();
+  }
+  return dynamodb;
+}
+
+export function setDynamoDBClient(client: AWS.DynamoDB.DocumentClient) {
+  dynamodb = client;
+}
 
 export interface ApiGatewayTokenAuthorizerEvent {
   type: string;
@@ -13,6 +27,7 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     const token = event.authorizationToken;
 
     if (!token || !token.startsWith('Basic ')) {
+      console.warn('Missing or invalid Authorization header');
       throw new Error('Unauthorized');
     }
 
@@ -20,7 +35,8 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     const [clientId, clientSecret] = credentials.split(':');
 
     if (!clientId || !clientSecret) {
-      throw new Error('Invalid credentials format');
+      console.warn('Invalid credentials format');
+      throw new Error('Unauthorized');
     }
 
     // Hash the secret with SHA-256
@@ -29,8 +45,26 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     console.log('Client ID:', clientId);
     console.log('Hashed secret:', hashedSecret);
 
-    // In a real scenario, validate against DynamoDB clients table
-    // For now, we'll accept any non-empty credentials
+    // Validate against DynamoDB clients table
+    const clientTableName = process.env.CLIENTS_TABLE || 'user-address-clients-dev';
+    const result = await getDynamoDBClient()
+      .get({
+        TableName: clientTableName,
+        Key: { clientId },
+      })
+      .promise();
+
+    if (!result.Item) {
+      console.warn('Client not found:', clientId);
+      throw new Error('Unauthorized');
+    }
+
+    // Verify the hashed secret matches
+    if (result.Item.clientSecret !== hashedSecret) {
+      console.warn('Invalid credentials for client:', clientId);
+      throw new Error('Unauthorized');
+    }
+
     const principalId = clientId;
 
     const policy = {
