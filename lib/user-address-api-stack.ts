@@ -14,6 +14,7 @@ interface UserAddressApiStackProps extends cdk.StackProps {
 
 export class UserAddressApiStack extends cdk.Stack {
   private table: dynamodb.Table;
+  private clientsTable: dynamodb.Table;
   private kmsKey: kms.Key;
   private api: apigateway.RestApi;
   private authorizer: apigateway.TokenAuthorizer;
@@ -63,6 +64,20 @@ export class UserAddressApiStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    // Create DynamoDB table for API clients
+    this.clientsTable = new dynamodb.Table(this, 'ClientsTable', {
+      tableName: `user-address-clients-${env}`,
+      partitionKey: {
+        name: 'clientId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+      encryptionKey: this.kmsKey,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     // Create REST API
     this.api = new apigateway.RestApi(this, 'UserAddressApi', {
       restApiName: `user-address-api-${env}`,
@@ -89,6 +104,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const getAddressesFunction = this.createGetAddressesFunction(env);
     const updateAddressFunction = this.createUpdateAddressFunction(env);
     const deleteAddressFunction = this.createDeleteAddressFunction(env);
+    const initClientFunction = this.createInitClientFunction(env);
 
     // Create API endpoints
     const usersResource = this.api.root.addResource('users');
@@ -152,6 +168,11 @@ export class UserAddressApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ApiKeyId', {
       value: apiKey.keyId,
       description: 'API Key ID',
+    });
+
+    new cdk.CfnOutput(this, 'InitClientFunctionName', {
+      value: initClientFunction.functionName,
+      description: 'Init Client Lambda function name',
     });
   }
 
@@ -249,4 +270,21 @@ export class UserAddressApiStack extends cdk.Stack {
 
     return fn;
   }
-}
+
+  private createInitClientFunction(env: string): lambda.Function {
+    const fn = new lambda.Function(this, 'InitClientFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'init-client.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        CLIENT_TABLE_NAME: this.clientsTable.tableName,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    this.clientsTable.grantReadWriteData(fn);
+    this.kmsKey.grantEncryptDecrypt(fn);
+
+    return fn;
+  }

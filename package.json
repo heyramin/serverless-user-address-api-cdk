@@ -39,7 +39,11 @@
   "dependencies": {
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0",
+    "aws-sdk": "^2.1400.0",
+    "@aws-sdk/client-dynamodb": "^3.400.0",
+    "@aws-sdk/lib-dynamodb": "^3.400.0",
     "axios": "^1.6.0",
-    "joi": "^17.11.0"
+    "joi": "^17.11.0",
+    "uuid": "^9.0.0"
   }
 }
