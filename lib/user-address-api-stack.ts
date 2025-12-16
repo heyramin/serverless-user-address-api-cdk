@@ -24,12 +24,16 @@ export class UserAddressApiStack extends cdk.Stack {
 
     const env = props.environment;
 
-    // Create KMS key for encryption
+    // Create KMS key for encryption (shared by all DynamoDB tables in this stack)
     this.kmsKey = new kms.Key(this, 'AddressesTableKey', {
       description: 'KMS key for DynamoDB encryption',
       enableKeyRotation: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      pendingWindow: cdk.Duration.days(7), // 7-day waiting period for key deletion
     });
+
+    // Add alias for easier identification (reflects shared use across multiple tables)
+    this.kmsKey.addAlias(`alias/user-address-api-${env}`);
 
     // Create DynamoDB table for addresses
     this.table = new dynamodb.Table(this, 'AddressesTable', {
