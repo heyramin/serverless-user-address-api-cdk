@@ -1,0 +1,293 @@
+openapi: 3.0.0
+info:
+  title: User Address API
+  description: RESTful API for managing user addresses with CRUD operations
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: heyramin@gmail.com
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Development
+
+paths:
+  /users/{userId}/addresses:
+    post:
+      summary: Create a new address for a user
+      operationId: createAddress
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        201:
+          description: Address created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Retrieve addresses for a user with optional filtering
+      operationId: getAddresses
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - in: query
+          name: suburb
+          schema:
+            type: string
+          description: Filter by suburb
+        - in: query
+          name: postcode
+          schema:
+            type: string
+          description: Filter by postcode
+      responses:
+        200:
+          description: Addresses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressesListResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userId}/addresses/{addressId}:
+    patch:
+      summary: Update an existing address
+      operationId: updateAddress
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - in: path
+          name: addressId
+          required: true
+          schema:
+            type: string
+          description: Unique address identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressUpdate'
+      responses:
+        200:
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete an address
+      operationId: deleteAddress
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: Unique user identifier
+        - in: path
+          name: addressId
+          required: true
+          schema:
+            type: string
+          description: Unique address identifier
+      responses:
+        204:
+          description: Address deleted successfully
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique address identifier
+        userId:
+          type: string
+          description: User ID associated with this address
+        streetAddress:
+          type: string
+          description: Street address line
+        suburb:
+          type: string
+          description: Suburb or city name
+        state:
+          type: string
+          description: State abbreviation (e.g., NSW, VIC)
+        postcode:
+          type: string
+          description: Postal code
+        country:
+          type: string
+          default: Australia
+          description: Country name
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when address was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when address was last updated
+
+    AddressInput:
+      type: object
+      required:
+        - streetAddress
+        - suburb
+        - state
+        - postcode
+      properties:
+        streetAddress:
+          type: string
+          description: Street address line
+        suburb:
+          type: string
+          description: Suburb or city name
+        state:
+          type: string
+          description: State abbreviation (e.g., NSW, VIC)
+        postcode:
+          type: string
+          description: Postal code
+        country:
+          type: string
+          default: Australia
+          description: Country name
+
+    AddressUpdate:
+      type: object
+      properties:
+        streetAddress:
+          type: string
+          description: Street address line
+        suburb:
+          type: string
+          description: Suburb or city name
+        state:
+          type: string
+          description: State abbreviation
+        postcode:
+          type: string
+          description: Postal code
+        country:
+          type: string
+          description: Country name
+
+    AddressResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        addressId:
+          type: string
+          description: ID of the created/updated address
+
+    AddressesListResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+        statusCode:
+          type: integer
+
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: HTTP Basic Auth with SHA-256 hashed credentials
+
+security:
+  - BasicAuth: []
