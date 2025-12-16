@@ -34,6 +34,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
 
+      - name: Get AWS Account ID
+        id: account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+
       - name: Destroy ${{ inputs.environment }} stack
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.account.outputs.account_id }}
         run: |
           npx cdk destroy --context environment=${{ inputs.environment }} --force

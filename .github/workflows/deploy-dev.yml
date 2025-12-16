@@ -55,7 +55,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
 
+      - name: Get AWS Account ID
+        id: account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+
       - name: Deploy to dev
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.account.outputs.account_id }}
         run: npm run cdk:deploy:dev -- --require-approval never
 
       - name: Export API endpoint
