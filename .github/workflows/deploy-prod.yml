@@ -71,7 +71,7 @@ jobs:
       - name: Export API endpoint
         id: api
         run: |
-          API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-prod --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text --region ap-southeast-2)
+          API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-prod --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text --region ap-southeast-2)
           echo "API_ENDPOINT=$API_ENDPOINT" >> $GITHUB_OUTPUT
           echo "API endpoint: $API_ENDPOINT"
 
