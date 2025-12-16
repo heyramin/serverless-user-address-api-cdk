@@ -1,11 +1,7 @@
 name: Deploy Prod
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   build-and-test:
