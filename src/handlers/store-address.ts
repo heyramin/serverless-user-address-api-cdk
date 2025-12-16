@@ -2,14 +2,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import * as Joi from 'joi';
-import { 
-  isValidUserId, 
-  isValidStreetAddress, 
-  isValidSuburb, 
-  isValidState,
-  isValidCountry 
-} from '../utils/validation';
+import { isValidUserId } from '../utils/validation';
+import { Address } from '../types/address';
+import { addressCreationSchema } from '../schemas/address';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -17,76 +12,6 @@ let docClient = DynamoDBDocumentClient.from(ddbClient);
 export const setDocClient = (client: any) => {
   docClient = client;
 };
-
-const schema = Joi.object({
-  streetAddress: Joi.string()
-    .required()
-    .min(1)
-    .max(256)
-    .custom((value, helpers) => {
-      if (!isValidStreetAddress(value)) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    })
-    .messages({
-      'any.invalid': 'streetAddress can only contain letters, numbers, spaces, hyphens, apostrophes, periods, commas, and # symbols'
-    }),
-  suburb: Joi.string()
-    .required()
-    .min(1)
-    .max(128)
-    .custom((value, helpers) => {
-      if (!isValidSuburb(value)) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    })
-    .messages({
-      'any.invalid': 'suburb can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
-    }),
-  state: Joi.string()
-    .required()
-    .custom((value, helpers) => {
-      if (!isValidState(value)) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    })
-    .messages({
-      'any.invalid': 'state must be a valid Australian state code (NSW, VIC, QLD, WA, SA, TAS, ACT, NT)'
-    }),
-  postcode: Joi.string()
-    .required()
-    .pattern(/^\d{4}$/),
-  country: Joi.string()
-    .default('Australia')
-    .custom((value, helpers) => {
-      if (!isValidCountry(value)) {
-        return helpers.error('any.invalid');
-      }
-      return value;
-    })
-    .messages({
-      'any.invalid': 'country can only contain letters, numbers, spaces, hyphens, and apostrophes'
-    }),
-  addressType: Joi.string()
-    .valid('billing', 'mailing', 'residential', 'business')
-    .optional(),
-});
-
-interface Address {
-  userId: string;
-  addressId: string;
-  streetAddress: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  country: string;
-  addressType?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -111,7 +36,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // Validate input
-    const { error, value } = schema.validate(body);
+    const { error, value } = addressCreationSchema.validate(body);
     if (error) {
       return {
         statusCode: 400,

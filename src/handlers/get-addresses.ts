@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId } from '../utils/validation';
+import { Address } from '../types/address';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -9,19 +10,6 @@ let docClient = DynamoDBDocumentClient.from(ddbClient);
 export const setDocClient = (client: any) => {
   docClient = client;
 };
-
-interface Address {
-  userId: string;
-  addressId: string;
-  streetAddress: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  country: string;
-  addressType?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
