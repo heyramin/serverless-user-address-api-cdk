@@ -9,7 +9,9 @@ describe('Init Client Handler', () => {
 
   beforeEach(() => {
     mockDynamoDBClient = {
-      send: jest.fn().mockResolvedValue({}),
+      put: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({}),
+      }),
     };
     setDynamoDBClient(mockDynamoDBClient);
     process.env.CLIENT_TABLE_NAME = 'test-clients-table';
@@ -29,7 +31,7 @@ describe('Init Client Handler', () => {
     expect(response.clientName).toBe('Test Client');
     expect(response.createdAt).toBeDefined();
     expect(response.warning).toBe('Save the clientSecret now - it cannot be retrieved later');
-    expect(mockDynamoDBClient.send).toHaveBeenCalled();
+    expect(mockDynamoDBClient.put).toHaveBeenCalled();
   });
 
   it('should create client without description', async () => {
@@ -42,7 +44,7 @@ describe('Init Client Handler', () => {
     expect(response.message).toBe('Client created successfully');
     expect(response.clientId).toBeDefined();
     expect(response.clientSecret).toBeDefined();
-    expect(mockDynamoDBClient.send).toHaveBeenCalled();
+    expect(mockDynamoDBClient.put).toHaveBeenCalled();
   });
 
   it('should return error for missing clientName', async () => {
@@ -62,9 +64,9 @@ describe('Init Client Handler', () => {
 
     await handler(event);
 
-    expect(mockDynamoDBClient.send).toHaveBeenCalled();
-    const callArgs = mockDynamoDBClient.send.mock.calls[0][0];
-    const storedItem = callArgs.input.Item;
+    expect(mockDynamoDBClient.put).toHaveBeenCalled();
+    const callArgs = mockDynamoDBClient.put.mock.calls[0][0];
+    const storedItem = callArgs.Item;
 
     // Verify the stored secret is hashed (not plain text)
     expect(storedItem.clientSecret).toBeDefined();
@@ -101,6 +103,6 @@ describe('Init Client Handler', () => {
 
     expect(response.message).toBe('Client created successfully');
     expect(response.statusCode).toBeUndefined(); // Direct invocation returns object without statusCode
-    expect(mockDynamoDBClient.send).toHaveBeenCalled();
+    expect(mockDynamoDBClient.put).toHaveBeenCalled();
   });
 });
