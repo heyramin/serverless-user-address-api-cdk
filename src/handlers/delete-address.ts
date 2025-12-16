@@ -35,11 +35,17 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 204,
       body: '',
     };
-  } catch (error) {
-    console.error('Error:', error);
+  } catch (error: any) {
+    console.error('Error deleting address:', error);
+    console.error('Error message:', error?.message);
+    console.error('Error code:', error?.Code);
+    
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error' }),
+      body: JSON.stringify({ 
+        message: 'Internal server error',
+        error: error?.message || 'Unknown error',
+      }),
     };
   }
 };
