@@ -32,10 +32,11 @@ describe('Update Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(200);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(200);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Address updated successfully');
     expect(body.addressId).toBe('addr1');
     expect(body.address.streetAddress).toBe('789 New St');
@@ -47,10 +48,11 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({}),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('No fields to update');
   });
 
@@ -60,10 +62,11 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId or addressId');
   });
 
@@ -73,10 +76,11 @@ describe('Update Address Handler', () => {
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId or addressId');
   });
 
@@ -107,10 +111,11 @@ describe('Update Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(200);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(200);
+    const body = JSON.parse((response as any).body);
     expect(body.address.suburb).toBe('Melbourne');
     expect(body.address.state).toBe('VIC');
     expect(body.address.postcode).toBe('3000');

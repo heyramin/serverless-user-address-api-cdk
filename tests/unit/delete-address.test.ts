@@ -18,10 +18,11 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(204);
-    expect(response.body).toBe('');
+    expect((response as any).statusCode).toBe(204);
+    expect((response as any).body).toBe('');
   });
 
   it('should return 400 for missing userId', async () => {
@@ -30,10 +31,11 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId or addressId');
   });
 
@@ -43,10 +45,11 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId or addressId');
   });
 
@@ -56,10 +59,11 @@ describe('Delete Address Handler', () => {
       body: null,
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId or addressId');
   });
 });
