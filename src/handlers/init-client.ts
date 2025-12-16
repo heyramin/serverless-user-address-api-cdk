@@ -18,11 +18,13 @@
  */
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import * as AWS from 'aws-sdk';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
-let dynamodb = new AWS.DynamoDB.DocumentClient();
+const dynamodbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'ap-southeast-2' });
+let dynamodb = DynamoDBDocumentClient.from(dynamodbClient);
 
 export const setDynamoDBClient = (client: any) => {
   dynamodb = client;
@@ -80,12 +82,12 @@ export const handler = async (event: ClientRequest | APIGatewayProxyEvent): Prom
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    await dynamodb
-      .put({
+    await dynamodb.send(
+      new PutCommand({
         TableName: clientTableName,
         Item: clientRecord,
       })
-      .promise();
+    );
 
     // Return clientId and plain text secret (only shown once!)
     const response = {
