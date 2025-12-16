@@ -231,7 +231,7 @@ export class UserAddressApiStack extends cdk.Stack {
         ADDRESSES_TABLE: this.table.tableName,
       },
       bundling: {
-        nodeModules: ['aws-sdk'],
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -252,7 +252,7 @@ export class UserAddressApiStack extends cdk.Stack {
         ADDRESSES_TABLE: this.table.tableName,
       },
       bundling: {
-        nodeModules: ['aws-sdk'],
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -273,7 +273,7 @@ export class UserAddressApiStack extends cdk.Stack {
         ADDRESSES_TABLE: this.table.tableName,
       },
       bundling: {
-        nodeModules: ['aws-sdk'],
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });

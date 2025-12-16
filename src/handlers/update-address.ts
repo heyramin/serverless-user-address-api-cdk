@@ -25,13 +25,16 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Build update expression dynamically
     const updates: string[] = [];
     const values: Record<string, any> = {};
+    const names: Record<string, string> = {};
 
     if (body.street) {
-      updates.push('street = :street');
+      updates.push('#street = :street');
+      names['#street'] = 'street';
       values[':street'] = body.street;
     }
     if (body.suburb) {
-      updates.push('suburb = :suburb');
+      updates.push('#suburb = :suburb');
+      names['#suburb'] = 'suburb';
       values[':suburb'] = body.suburb;
     }
     if (body.addressType) {
@@ -41,19 +44,23 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           body: JSON.stringify({ message: 'Invalid addressType. Must be one of: billing, mailing, residential, business' }),
         };
       }
-      updates.push('addressType = :addressType');
+      updates.push('#addressType = :addressType');
+      names['#addressType'] = 'addressType';
       values[':addressType'] = body.addressType;
     }
     if (body.state) {
-      updates.push('state = :state');
+      updates.push('#state = :state');
+      names['#state'] = 'state';
       values[':state'] = body.state;
     }
     if (body.postcode) {
-      updates.push('postcode = :postcode');
+      updates.push('#postcode = :postcode');
+      names['#postcode'] = 'postcode';
       values[':postcode'] = body.postcode;
     }
     if (body.country) {
-      updates.push('country = :country');
+      updates.push('#country = :country');
+      names['#country'] = 'country';
       values[':country'] = body.country;
     }
 
@@ -64,7 +71,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    updates.push('updatedAt = :updatedAt');
+    updates.push('#updatedAt = :updatedAt');
+    names['#updatedAt'] = 'updatedAt';
     values[':updatedAt'] = new Date().toISOString();
 
     const result = await docClient.send(
@@ -75,6 +83,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           addressId,
         },
         UpdateExpression: `SET ${updates.join(', ')}`,
+        ExpressionAttributeNames: names,
         ExpressionAttributeValues: values,
         ReturnValues: 'ALL_NEW',
       })
