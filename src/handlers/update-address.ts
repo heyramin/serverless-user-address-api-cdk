@@ -30,6 +30,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       updates.push('street = :street');
       values[':street'] = body.street;
     }
+    if (body.suburb) {
+      updates.push('suburb = :suburb');
+      values[':suburb'] = body.suburb;
+    }
     if (body.addressType) {
       if (!['billing', 'mailing', 'residential', 'business'].includes(body.addressType)) {
         return {
