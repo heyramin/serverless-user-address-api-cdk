@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -270,11 +271,10 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createInitClientFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'InitClientFunction', {
+    const fn = new NodejsFunction(this, 'InitClientFunction', {
+      entry: path.join(__dirname, '../src/handlers/init-client.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'init-client.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
-      timeout: cdk.Duration.seconds(30),
       environment: {
         CLIENT_TABLE_NAME: this.clientsTable.tableName,
       },
