@@ -10,7 +10,7 @@ if (!['dev', 'prod'].includes(environment)) {
   throw new Error('Invalid environment. Must be "dev" or "prod"');
 }
 
-new UserAddressApiStack(app, `UserAddressApiStack-${environment}`, {
+new UserAddressApiStack(app, `UserAddressApiStack-v2-${environment}`, {
   environment: environment as 'dev' | 'prod',
   env: {
     region: 'ap-southeast-2',

@@ -8,12 +8,7 @@ jest.mock('uuid', () => ({
 }));
 
 describe('Store Address Handler', () => {
-  let mockDocClient: jest.Mocked<DynamoDBDocumentClient>;
-
   beforeEach(() => {
-    mockDocClient = DynamoDBDocumentClient.from as jest.MockedFunction<
-      typeof DynamoDBDocumentClient.from
-    >;
     jest.clearAllMocks();
   });
 
@@ -33,10 +28,11 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(201);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(201);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Address created successfully');
     expect(body.addressId).toBe('test-uuid-1234');
     expect(body.address.userId).toBe('user123');
@@ -52,10 +48,11 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Validation failed');
   });
 
@@ -70,10 +67,11 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(400);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(400);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Missing userId');
   });
 
@@ -93,10 +91,11 @@ describe('Store Address Handler', () => {
       }),
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(201);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(201);
+    const body = JSON.parse((response as any).body);
     expect(body.address.country).toBe('Australia');
   });
-});
+};

@@ -43,10 +43,11 @@ describe('Get Addresses Handler', () => {
       queryStringParameters: null,
     } as any;
 
-    const response = await handler(event);
+    const context = {} as any;
+    const response = await handler(event, context);
 
-    expect(response.statusCode).toBe(200);
-    const body = JSON.parse(response.body);
+    expect((response as any).statusCode).toBe(200);
+    const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Addresses retrieved successfully');
     expect(body.addresses).toHaveLength(2);
     expect(body.addresses[0].suburb).toBe('Sydney');
