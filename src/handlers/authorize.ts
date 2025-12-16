@@ -21,10 +21,14 @@ export interface ApiGatewayTokenAuthorizerEvent {
 }
 
 export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<any> {
+  console.log('=== AUTHORIZE HANDLER START ===');
+  console.log('Event:', JSON.stringify(event, null, 2));
+  
   try {
     console.log('Authorizing request:', event.methodArn);
 
     const token = event.authorizationToken;
+    console.log('Token present:', !!token);
 
     if (!token || !token.startsWith('Basic ')) {
       console.warn('Missing or invalid Authorization header');
@@ -47,12 +51,16 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
 
     // Validate against DynamoDB clients table
     const clientTableName = process.env.CLIENTS_TABLE || 'user-address-clients-dev';
+    console.log('Querying table:', clientTableName);
+    
     const result = await getDynamoDBClient()
       .get({
         TableName: clientTableName,
         Key: { clientId },
       })
       .promise();
+
+    console.log('DynamoDB result:', JSON.stringify(result, null, 2));
 
     if (!result.Item) {
       console.warn('Client not found:', clientId);
@@ -62,6 +70,8 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     // Verify the hashed secret matches
     if (result.Item.clientSecret !== hashedSecret) {
       console.warn('Invalid credentials for client:', clientId);
+      console.warn('Expected:', result.Item.clientSecret);
+      console.warn('Got:', hashedSecret);
       throw new Error('Unauthorized');
     }
 
@@ -85,9 +95,14 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     };
 
     console.log('Authorization successful for client:', clientId);
+    console.log('=== AUTHORIZE HANDLER END (SUCCESS) ===');
     return policy;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('=== AUTHORIZE HANDLER ERROR ===');
     console.error('Authorization failed:', error);
-    throw new Error('Unauthorized');
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    console.error('=== AUTHORIZE HANDLER END (FAILURE) ===');
+    throw error;
   }
 }

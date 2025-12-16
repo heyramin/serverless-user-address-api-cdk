@@ -191,6 +191,9 @@ export class UserAddressApiStack extends cdk.Stack {
       environment: {
         CLIENTS_TABLE: `user-address-clients-${env}`,
       },
+      bundling: {
+        externalModules: ['aws-sdk'],
+      },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
