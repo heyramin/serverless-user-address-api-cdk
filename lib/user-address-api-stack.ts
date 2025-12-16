@@ -47,7 +47,6 @@ export class UserAddressApiStack extends cdk.Stack {
       encryptionKey: this.kmsKey,
       pointInTimeRecovery: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      stream: dynamodb.StreamSpecification.NEW_AND_OLD_IMAGES,
     });
 
     // Add GSI for suburb/postcode filtering
