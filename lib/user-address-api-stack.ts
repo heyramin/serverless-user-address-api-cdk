@@ -188,12 +188,7 @@ export class UserAddressApiStack extends cdk.Stack {
     });
 
     // Grant access to clients table
-    const clientsTable = dynamodb.Table.fromTableName(
-      this,
-      'ClientsTable',
-      `user-address-clients-${env}`
-    );
-    clientsTable.grantReadData(fn);
+    this.clientsTable.grantReadData(fn);
 
     return fn;
   }
