@@ -80,12 +80,15 @@ jobs:
         run: |
           INIT_CLIENT_FUNCTION=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-prod --query 'Stacks[0].Outputs[?OutputKey==`InitClientFunctionName`].OutputValue' --output text --region ap-southeast-2)
           
-          RESPONSE=$(aws lambda invoke \
+          PAYLOAD=$(echo -n '{"clientName":"Integration Test Client","description":"For CI/CD integration tests"}' | base64 -w 0)
+          
+          aws lambda invoke \
             --function-name $INIT_CLIENT_FUNCTION \
-            --payload '{"clientName":"Integration Test Client","description":"For CI/CD integration tests"}' \
+            --payload $PAYLOAD \
             --region ap-southeast-2 \
-            /tmp/response.json \
-            && cat /tmp/response.json)
+            /tmp/response.json
+          
+          RESPONSE=$(cat /tmp/response.json)
           
           TEST_CLIENT_ID=$(echo $RESPONSE | grep -o '"clientId":"[^"]*' | cut -d'"' -f4)
           TEST_CLIENT_SECRET=$(echo $RESPONSE | grep -o '"clientSecret":"[^"]*' | cut -d'"' -f4)
