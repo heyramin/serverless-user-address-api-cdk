@@ -13,11 +13,7 @@ describe('Update Address Handler', () => {
 
   it('should update an address with new values', async () => {
     const updatedAddress = {
-<<<<<<< Updated upstream
-      userId: 'user_123',
-=======
       userId: 'user123',
->>>>>>> Stashed changes
       addressId: '550e8400-e29b-41d4-a716-446655440000',
       streetAddress: '789 New St',
       suburb: 'Sydney',
@@ -32,11 +28,7 @@ describe('Update Address Handler', () => {
     mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
-<<<<<<< Updated upstream
-      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
-=======
       pathParameters: { userId: 'user123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
->>>>>>> Stashed changes
       body: JSON.stringify({
         streetAddress: '789 New St',
         addressType: 'mailing',
@@ -54,11 +46,7 @@ describe('Update Address Handler', () => {
 
   it('should return 400 when no fields to update', async () => {
     const event = {
-<<<<<<< Updated upstream
-      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
-=======
       pathParameters: { userId: 'user123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
->>>>>>> Stashed changes
       body: JSON.stringify({}),
     } as any;
 
@@ -84,7 +72,7 @@ describe('Update Address Handler', () => {
 
   it('should return 400 for missing addressId', async () => {
     const event = {
-      pathParameters: { userId: 'user_123' },
+      pathParameters: { userId: 'user123' },
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
@@ -97,11 +85,7 @@ describe('Update Address Handler', () => {
 
   it('should update multiple fields', async () => {
     const updatedAddress = {
-<<<<<<< Updated upstream
-      userId: 'user_123',
-=======
       userId: 'user123',
->>>>>>> Stashed changes
       addressId: '550e8400-e29b-41d4-a716-446655440000',
       streetAddress: '789 New St',
       suburb: 'Melbourne',
@@ -116,11 +100,7 @@ describe('Update Address Handler', () => {
     mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
-<<<<<<< Updated upstream
-      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
-=======
       pathParameters: { userId: 'user123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
->>>>>>> Stashed changes
       body: JSON.stringify({
         streetAddress: '789 New St',
         suburb: 'Melbourne',
