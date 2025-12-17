@@ -1,121 +1,153 @@
 import { Given, When, Then, Before, After, DataTable } from '@cucumber/cucumber';
-import * as AWS from 'aws-sdk';
+import axios, { AxiosInstance } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import * as crypto from 'crypto';
 
 // World type for storing test context
 interface AddressWorld {
-  apiClient: AWS.DynamoDB.DocumentClient;
+  httpClient: AxiosInstance;
   currentResponse: any;
   lastAddressId: string;
   userId: string;
   addressData: any;
-  addresses: any[];
   error: any;
-  addressTableName: string;
-  clientTableName: string;
 }
 
 // Extend the World with our custom properties
 const world: AddressWorld = {
-  apiClient: null as any,
+  httpClient: null as any,
   currentResponse: null,
   lastAddressId: '',
   userId: '',
   addressData: {},
-  addresses: [],
   error: null,
-  addressTableName: process.env.ADDRESSES_TABLE_NAME || 'user-addresses-dev',
-  clientTableName: process.env.CLIENT_TABLE_NAME || 'user-address-clients-dev',
 };
 
-// Helper function to hash and encode credentials
-function hashSecret(secret: string): string {
-  return crypto.createHash('sha256').update(secret).digest('hex');
+// Helper function to create Basic Auth header
+function createBasicAuthHeader(clientId: string, clientSecret: string): string {
+  const credentials = `${clientId}:${clientSecret}`;
+  return `Basic ${Buffer.from(credentials).toString('base64')}`;
 }
 
 // Before hook - Initialize
 Before(function () {
-  const dynamodbConfig = {
-    region: process.env.AWS_REGION || 'ap-southeast-2',
-  };
+  const apiEndpoint = process.env.API_ENDPOINT;
+  const testClientId = process.env.TEST_CLIENT_ID;
+  const testClientSecret = process.env.TEST_CLIENT_SECRET;
 
-  if (process.env.DYNAMODB_ENDPOINT) {
-    (dynamodbConfig as any).endpoint = process.env.DYNAMODB_ENDPOINT;
+  if (!apiEndpoint || !testClientId || !testClientSecret) {
+    throw new Error(
+      'Missing required environment variables: API_ENDPOINT, TEST_CLIENT_ID, TEST_CLIENT_SECRET'
+    );
   }
 
-  world.apiClient = new AWS.DynamoDB.DocumentClient(dynamodbConfig);
+  world.httpClient = axios.create({
+    baseURL: apiEndpoint,
+    headers: {
+      Authorization: createBasicAuthHeader(testClientId, testClientSecret),
+      'Content-Type': 'application/json',
+    },
+    validateStatus: () => true, // Don't throw on any status code
+  });
+
+  world.userId = `test_user_${uuidv4().substring(0, 8)}`;
   world.currentResponse = null;
   world.lastAddressId = '';
-  world.userId = '';
   world.addressData = {};
-  world.addresses = [];
   world.error = null;
 });
 
 // After hook - Cleanup
 After(async function () {
-  // Cleanup stored addresses
-  if (world.addresses && world.addresses.length > 0) {
-    for (const address of world.addresses) {
-      try {
-        await world.apiClient
-          .delete({
-            TableName: world.addressTableName,
-            Key: {
-              userId: address.userId,
-              addressId: address.addressId,
-            },
-          })
-          .promise();
-      } catch (error) {
-        console.log(`Cleanup error: ${error}`);
-      }
-    }
-  }
+  // Cleanup is handled by API delete operations during tests
+  // No additional cleanup needed
 });
 
 // Background steps
 Given('the API is initialized', async function () {
-  // API is initialized in Before hook
-  if (!world.apiClient) {
-    throw new Error('API client not initialized');
+  if (!world.httpClient) {
+    throw new Error('HTTP client not initialized');
   }
 });
 
 Given('I am authenticated with valid credentials', async function () {
-  // In a real scenario, this would set up authentication
-  // For now, we're using DynamoDB directly which simulates authenticated access
-  world.userId = `test_user_${uuidv4().substring(0, 8)}`;
+  // Authentication is set up in Before hook via Basic Auth
 });
+
+// Helper: Store address via API
+async function storeAddress(addressData: any): Promise<void> {
+  try {
+    const response = await world.httpClient.post(`/users/${addressData.userId}/addresses`, {
+      streetAddress: addressData.streetAddress,
+      suburb: addressData.suburb,
+      state: addressData.state,
+      postcode: addressData.postcode,
+      country: addressData.country,
+    });
+
+    world.currentResponse = response;
+    if (response.status < 200 || response.status >= 300) {
+      world.error = new Error(`API returned status ${response.status}: ${JSON.stringify(response.data)}`);
+    } else {
+      world.lastAddressId = response.data?.addressId || response.data?.id || '';
+    }
+  } catch (error) {
+    world.error = error;
+  }
+}
+
+// Helper: Query addresses via API
+async function queryAddresses(userId: string, postcode?: string): Promise<any[]> {
+  try {
+    let url = `/users/${userId}/addresses`;
+    if (postcode) {
+      url += `?postcode=${postcode}`;
+    }
+
+    const response = await world.httpClient.get(url);
+    world.currentResponse = response;
+    
+    if (response.status < 200 || response.status >= 300) {
+      world.error = new Error(`API error ${response.status}: ${JSON.stringify(response.data)}`);
+      return [];
+    }
+    
+    return response.data?.addresses || response.data || [];
+  } catch (error) {
+    world.error = error;
+    return [];
+  }
+}
+
+// Helper: Delete address via API
+async function deleteAddress(userId: string, addressId: string): Promise<void> {
+  try {
+    const response = await world.httpClient.delete(`/users/${userId}/addresses/${addressId}`);
+    world.currentResponse = response;
+    if (response.status < 200 || response.status >= 300) {
+      world.error = new Error(`API error ${response.status}: ${JSON.stringify(response.data)}`);
+    }
+  } catch (error) {
+    world.error = error;
+  }
+}
 
 // Store address steps
 When('I store a new address with the following details:', async function (dataTable: DataTable) {
   const rows = dataTable.rowsHash();
 
   world.addressData = {
-    addressId: uuidv4(),
     userId: rows['userId'] || world.userId,
     streetAddress: rows['streetAddress'],
     suburb: rows['suburb'],
     state: rows['state'],
     postcode: rows['postcode'],
     country: rows['country'],
-    createdAt: new Date().toISOString(),
   };
 
-  try {
-    world.currentResponse = await world.apiClient
-      .put({
-        TableName: world.addressTableName,
-        Item: world.addressData,
-      })
-      .promise();
+  await storeAddress(world.addressData);
 
-    world.lastAddressId = world.addressData.addressId;
-    world.addresses.push(world.addressData);
-  } catch (error) {
-    world.error = error;
+  if (!world.error) {
+    world.addressData.addressId = world.lastAddressId;
   }
 });
 
@@ -125,6 +157,9 @@ Then('the address should be created successfully', function () {
   }
   if (!world.currentResponse) {
     throw new Error('No response from address creation');
+  }
+  if (world.currentResponse.status === 400 || world.currentResponse.status === 500) {
+    throw new Error(`API error: ${JSON.stringify(world.currentResponse.data)}`);
   }
 });
 
@@ -137,72 +172,46 @@ Then('the response should contain an addressId', function () {
 // Retrieve addresses by postcode steps
 Given('I have stored addresses with the following postcodes:', async function (dataTable: DataTable) {
   const rows = dataTable.rows();
-  const userId = world.userId || `test_user_${uuidv4().substring(0, 8)}`;
 
   for (const row of rows) {
-    const address = {
-      addressId: uuidv4(),
-      userId: userId,
+    await storeAddress({
+      userId: world.userId,
       streetAddress: `${Math.random() * 1000} Test Street`,
       suburb: 'Test Suburb',
       state: 'NSW',
       postcode: row[0],
       country: 'Australia',
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    try {
-      await world.apiClient
-        .put({
-          TableName: world.addressTableName,
-          Item: address,
-        })
-        .promise();
-
-      world.addresses.push(address);
-    } catch (error) {
-      throw new Error(`Failed to store address: ${(error as any).message}`);
+    if (world.error) {
+      throw new Error(`Failed to store address: ${world.error.message}`);
     }
   }
 });
 
 When('I retrieve addresses with postcode {string}', async function (postcode: string) {
-  try {
-    const response = await world.apiClient
-      .query({
-        TableName: world.addressTableName,
-        IndexName: 'userIdPostcodeIndex',
-        KeyConditionExpression: 'userId = :userId',
-        FilterExpression: 'postcode = :postcode',
-        ExpressionAttributeValues: {
-          ':userId': world.userId,
-          ':postcode': postcode,
-        },
-      })
-      .promise();
-
-    world.currentResponse = response;
-  } catch (error) {
-    world.error = error;
+  await queryAddresses(world.userId, postcode);
+  if (world.error) {
+    throw world.error;
   }
 });
 
 Then('I should get {int} address', function (count: number) {
-  if (!world.currentResponse || !world.currentResponse.Items) {
+  if (!world.currentResponse || !world.currentResponse.data) {
     throw new Error('No response received');
   }
-  if (world.currentResponse.Items.length !== count) {
-    throw new Error(
-      `Expected ${count} address(es), got ${world.currentResponse.Items.length}`
-    );
+  const items = Array.isArray(world.currentResponse.data) ? world.currentResponse.data : world.currentResponse.data.addresses || [];
+  if (items.length !== count) {
+    throw new Error(`Expected ${count} address(es), got ${items.length}`);
   }
 });
 
 Then('the address should have postcode {string}', function (postcode: string) {
-  if (!world.currentResponse.Items || world.currentResponse.Items.length === 0) {
+  const items = Array.isArray(world.currentResponse.data) ? world.currentResponse.data : world.currentResponse.data.addresses || [];
+  if (items.length === 0) {
     throw new Error('No addresses found');
   }
-  const address = world.currentResponse.Items[0];
+  const address = items[0];
   if (address.postcode !== postcode) {
     throw new Error(`Expected postcode ${postcode}, got ${address.postcode}`);
   }
@@ -213,28 +222,17 @@ Given('I have stored addresses with the following details:', async function (dat
   const rows = dataTable.hashes();
 
   for (const row of rows) {
-    const address = {
-      addressId: uuidv4(),
+    await storeAddress({
       userId: row['userId'],
       streetAddress: `${Math.random() * 1000} Test Street`,
       suburb: 'Test Suburb',
       state: 'NSW',
       postcode: row['postcode'],
       country: 'Australia',
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    try {
-      await world.apiClient
-        .put({
-          TableName: world.addressTableName,
-          Item: address,
-        })
-        .promise();
-
-      world.addresses.push(address);
-    } catch (error) {
-      throw new Error(`Failed to store address: ${(error as any).message}`);
+    if (world.error) {
+      throw new Error(`Failed to store address: ${world.error.message}`);
     }
   }
 });
@@ -242,31 +240,19 @@ Given('I have stored addresses with the following details:', async function (dat
 When(
   'I retrieve addresses for user {string} with postcode {string}',
   async function (userId: string, postcode: string) {
-    try {
-      const response = await world.apiClient
-        .query({
-          TableName: world.addressTableName,
-          KeyConditionExpression: 'userId = :userId',
-          FilterExpression: 'postcode = :postcode',
-          ExpressionAttributeValues: {
-            ':userId': userId,
-            ':postcode': postcode,
-          },
-        })
-        .promise();
-
-      world.currentResponse = response;
-    } catch (error) {
-      world.error = error;
+    await queryAddresses(userId, postcode);
+    if (world.error) {
+      throw world.error;
     }
   }
 );
 
 Then('the address postcode should be {string}', function (postcode: string) {
-  if (!world.currentResponse.Items || world.currentResponse.Items.length === 0) {
+  const items = Array.isArray(world.currentResponse.data) ? world.currentResponse.data : world.currentResponse.data.addresses || [];
+  if (items.length === 0) {
     throw new Error('No addresses found');
   }
-  const address = world.currentResponse.Items[0];
+  const address = items[0];
   if (address.postcode !== postcode) {
     throw new Error(`Expected postcode ${postcode}, got ${address.postcode}`);
   }
@@ -276,31 +262,18 @@ Then('the address postcode should be {string}', function (postcode: string) {
 When('I update the address with the following changes:', async function (dataTable: DataTable) {
   const updates = dataTable.rowsHash();
 
-  const updateExpression = Object.keys(updates)
-    .map((key, index) => `${key} = :val${index}`)
-    .join(', ');
-
-  const expressionAttributeValues: any = {};
-  Object.values(updates).forEach((value, index) => {
-    expressionAttributeValues[`:val${index}`] = value;
-  });
-
   try {
-    world.currentResponse = await world.apiClient
-      .update({
-        TableName: world.addressTableName,
-        Key: {
-          userId: world.addressData.userId,
-          addressId: world.lastAddressId,
-        },
-        UpdateExpression: `SET ${updateExpression}`,
-        ExpressionAttributeValues: expressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
-      })
-      .promise();
+    const response = await world.httpClient.patch(
+      `/users/${world.addressData.userId}/addresses/${world.lastAddressId}`,
+      updates
+    );
 
-    // Update cached data
-    Object.assign(world.addressData, updates);
+    world.currentResponse = response;
+    if (response.status < 200 || response.status >= 300) {
+      world.error = new Error(`API error ${response.status}: ${JSON.stringify(response.data)}`);
+    } else {
+      Object.assign(world.addressData, updates);
+    }
   } catch (error) {
     world.error = error;
   }
@@ -315,44 +288,22 @@ Then('the address should be updated successfully', function () {
   }
 });
 
-Then(
-  'the updated address should contain:',
-  function (dataTable: DataTable) {
-    const expected = dataTable.rowsHash();
+Then('the updated address should contain:', function (dataTable: DataTable) {
+  const expected = dataTable.rowsHash();
+  const data = world.currentResponse.data || {};
 
-    if (!world.currentResponse.Attributes) {
-      throw new Error('No attributes in update response');
-    }
-
-    for (const [key, value] of Object.entries(expected)) {
-      if (world.currentResponse.Attributes[key] !== value) {
-        throw new Error(
-          `Expected ${key} to be ${value}, got ${world.currentResponse.Attributes[key]}`
-        );
-      }
+  for (const [key, value] of Object.entries(expected)) {
+    if (data[key] !== value) {
+      throw new Error(`Expected ${key} to be ${value}, got ${data[key]}`);
     }
   }
-);
+});
 
 // Delete address steps
 When('I delete the address', async function () {
-  try {
-    world.currentResponse = await world.apiClient
-      .delete({
-        TableName: world.addressTableName,
-        Key: {
-          userId: world.addressData.userId,
-          addressId: world.lastAddressId,
-        },
-      })
-      .promise();
-
-    // Remove from tracking
-    world.addresses = world.addresses.filter(
-      (a) => a.addressId !== world.lastAddressId
-    );
-  } catch (error) {
-    world.error = error;
+  await deleteAddress(world.addressData.userId, world.lastAddressId);
+  if (world.error) {
+    throw world.error;
   }
 });
 
@@ -366,68 +317,43 @@ Then('the address should be deleted successfully', function () {
 });
 
 Then('attempting to retrieve the address should return no results', async function () {
-  try {
-    const response = await world.apiClient
-      .get({
-        TableName: world.addressTableName,
-        Key: {
-          userId: world.addressData.userId,
-          addressId: world.lastAddressId,
-        },
-      })
-      .promise();
+  const addresses = await queryAddresses(world.addressData.userId);
+  const found = addresses.find((a) => a.addressId === world.lastAddressId);
 
-    if (response.Item) {
-      throw new Error('Address still exists after deletion');
-    }
-  } catch (error) {
-    if ((error as any).code === 'ResourceNotFoundException') {
-      // Expected
-      return;
-    }
-    throw error;
+  if (found) {
+    throw new Error('Address still exists after deletion');
   }
 });
 
 // Validation steps
 When('I attempt to store an address without a suburb', async function () {
-  world.addressData = {
-    addressId: uuidv4(),
-    userId: world.userId || `test_user_${uuidv4().substring(0, 8)}`,
-    streetAddress: '123 Test Street',
-    // Missing suburb
-    state: 'NSW',
-    postcode: '2000',
-    country: 'Australia',
-    createdAt: new Date().toISOString(),
-  };
-
   try {
-    world.currentResponse = await world.apiClient
-      .put({
-        TableName: world.addressTableName,
-        Item: world.addressData,
-      })
-      .promise();
+    const response = await world.httpClient.post(`/users/${world.userId}/addresses`, {
+      streetAddress: '123 Test Street',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+    });
+
+    world.currentResponse = response;
+    if (response.status < 400) {
+      world.error = new Error('Expected validation error but request succeeded');
+    }
   } catch (error) {
     world.error = error;
   }
 });
 
 Then('the request should fail with validation error', function () {
-  if (!world.error) {
+  if (!world.error && world.currentResponse.status < 400) {
     throw new Error('Expected validation error but request succeeded');
   }
 });
 
 Then('the error message should mention {string}', function (keyword: string) {
-  if (!world.error || !world.error.message) {
-    throw new Error('No error message available');
-  }
-  if (!world.error.message.includes(keyword)) {
-    throw new Error(
-      `Error message does not contain "${keyword}". Message: ${world.error.message}`
-    );
+  const errorMsg = world.error?.message || world.currentResponse?.data?.message || '';
+  if (!errorMsg.includes(keyword)) {
+    throw new Error(`Error message does not contain "${keyword}". Got: ${errorMsg}`);
   }
 });
 
@@ -438,58 +364,38 @@ Given(
     const rows = dataTable.hashes();
 
     for (const row of rows) {
-      const address = {
-        addressId: uuidv4(),
+      await storeAddress({
         userId: userId,
         streetAddress: row['streetAddress'],
         suburb: row['suburb'],
         state: 'NSW',
         postcode: row['postcode'],
         country: 'Australia',
-        createdAt: new Date().toISOString(),
-      };
+      });
 
-      try {
-        await world.apiClient
-          .put({
-            TableName: world.addressTableName,
-            Item: address,
-          })
-          .promise();
-
-        world.addresses.push(address);
-      } catch (error) {
-        throw new Error(`Failed to store address: ${(error as any).message}`);
+      if (world.error) {
+        throw new Error(`Failed to store address: ${world.error.message}`);
       }
     }
   }
 );
 
 When('I retrieve all addresses for user {string}', async function (userId: string) {
-  try {
-    const response = await world.apiClient
-      .query({
-        TableName: world.addressTableName,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId,
-        },
-      })
-      .promise();
-
-    world.currentResponse = response;
-  } catch (error) {
-    world.error = error;
+  await queryAddresses(userId);
+  if (world.error) {
+    throw world.error;
   }
 });
 
 Then('each address should have the correct userId', function () {
-  if (!world.currentResponse.Items) {
+  const items = Array.isArray(world.currentResponse.data) ? world.currentResponse.data : world.currentResponse.data.addresses || [];
+  if (!items || items.length === 0) {
     throw new Error('No addresses found');
   }
 
-  for (const address of world.currentResponse.Items) {
-    if (address.userId !== world.currentResponse.Items[0].userId) {
+  const expectedUserId = items[0].userId;
+  for (const address of items) {
+    if (address.userId !== expectedUserId) {
       throw new Error('Address has incorrect userId');
     }
   }
