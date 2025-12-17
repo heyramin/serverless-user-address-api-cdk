@@ -97,6 +97,15 @@ Content-Type: application/json
 }
 ```
 
+**409 Conflict** - Duplicate address already exists:
+```json
+{
+  "message": "An identical address already exists for this user",
+  "error": "DUPLICATE_ADDRESS"
+}
+```
+**Note:** The duplicate check compares `streetAddress`, `suburb`, `state`, `postcode`, `country`, and `addressType` fields. Comparison is case-insensitive and whitespace is trimmed during validation. For example, "123 Main St" and "123 main st" are treated as duplicates. Duplicates are detected per user (userId), so different users can have the same address.
+
 **500 Internal Server Error** - Server error:
 ```json
 {
