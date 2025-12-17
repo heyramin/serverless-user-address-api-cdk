@@ -1,6 +1,9 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import { isValidUserId, isValidAddressId } from '../utils/validation';
+import { Address } from '../types/address';
+import { addressUpdateSchema } from '../schemas/address';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -22,46 +25,70 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Validate userId and addressId format (prevent injection attacks)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
+    if (!isValidAddressId(addressId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid addressId format. Must be a valid UUID.' 
+        }),
+      };
+    }
+
+    // Validate request body against update schema
+    const { error, value } = addressUpdateSchema.validate(body);
+    if (error) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: error.details[0].message 
+        }),
+      };
+    }
+
     // Build update expression dynamically
     const updates: string[] = [];
     const values: Record<string, any> = {};
     const names: Record<string, string> = {};
 
-    if (body.street) {
-      updates.push('#street = :street');
-      names['#street'] = 'street';
-      values[':street'] = body.street;
+    if (value.streetAddress) {
+      updates.push('#streetAddress = :streetAddress');
+      names['#streetAddress'] = 'streetAddress';
+      values[':streetAddress'] = value.streetAddress;
     }
-    if (body.suburb) {
+    if (value.suburb) {
       updates.push('#suburb = :suburb');
       names['#suburb'] = 'suburb';
-      values[':suburb'] = body.suburb;
+      values[':suburb'] = value.suburb;
     }
-    if (body.addressType) {
-      if (!['billing', 'mailing', 'residential', 'business'].includes(body.addressType)) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ message: 'Invalid addressType. Must be one of: billing, mailing, residential, business' }),
-        };
-      }
+    if (value.addressType) {
       updates.push('#addressType = :addressType');
       names['#addressType'] = 'addressType';
-      values[':addressType'] = body.addressType;
+      values[':addressType'] = value.addressType;
     }
-    if (body.state) {
+    if (value.state) {
       updates.push('#state = :state');
       names['#state'] = 'state';
-      values[':state'] = body.state;
+      values[':state'] = value.state;
     }
-    if (body.postcode) {
+    if (value.postcode) {
       updates.push('#postcode = :postcode');
       names['#postcode'] = 'postcode';
-      values[':postcode'] = body.postcode;
+      values[':postcode'] = value.postcode;
     }
-    if (body.country) {
+    if (value.country) {
       updates.push('#country = :country');
       names['#country'] = 'country';
-      values[':country'] = body.country;
+      values[':country'] = value.country;
     }
 
     if (updates.length === 0) {

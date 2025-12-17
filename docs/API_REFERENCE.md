@@ -28,12 +28,12 @@ Content-Type: application/json
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier |
+| userId | string | Yes | Unique user identifier (alphanumeric, hyphens, underscores only) |
 
 **Request Body:**
 ```json
 {
-  "street": "123 Main Street",
+  "streetAddress": "123 Main Street",
   "suburb": "Sydney",
   "state": "NSW",
   "postcode": "2000",
@@ -43,14 +43,22 @@ Content-Type: application/json
 ```
 
 **Request Body Fields:**
-| Field | Type | Required | Values | Description |
+| Field | Type | Required | Format | Description |
 |-------|------|----------|--------|-------------|
-| street | string | Yes | Any string | Street address line |
-| suburb | string | Yes | Any string | Suburb or city name |
-| state | string | Yes | Any string | State abbreviation (NSW, VIC, etc) |
-| postcode | string | Yes | Any string | Postal code |
-| country | string | No | Any string | Country name (defaults to Australia) |
+| streetAddress | string | Yes | Alphanumeric + spaces, hyphens, apostrophes, periods, commas, # | Street address line (supports unit numbers like "123-A", "Level #5") |
+| suburb | string | Yes | Alphanumeric + spaces, hyphens, apostrophes, periods | Suburb or city name |
+| state | string | Yes | NSW, VIC, QLD, WA, SA, TAS, ACT, NT | Australian state/territory code |
+| postcode | string | Yes | 4 digits (0000-9999) | Australian postcode |
+| country | string | No | Alphanumeric + spaces, hyphens, apostrophes | Country name (defaults to Australia) |
 | addressType | string | No | billing, mailing, residential, business | Type of address |
+
+**Validation Rules:**
+- `userId`: 1-128 characters, only alphanumeric characters, hyphens (-), and underscores (_) allowed
+- `streetAddress`: Supports letters, numbers, spaces, and special characters: - ' . , #
+- `suburb`: Supports letters, numbers, spaces, and characters: - ' .
+- `state`: Must be a valid Australian state or territory code
+- `postcode`: Must be exactly 4 digits
+- `country`: Supports letters, numbers, spaces, and characters: - '
 
 **Response (201 Created):**
 ```json
@@ -125,7 +133,7 @@ Authorization: Basic <base64(clientId:clientSecret)>
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
@@ -141,7 +149,7 @@ Authorization: Basic <base64(clientId:clientSecret)>
     {
       "userId": "user123",
       "addressId": "550e8400-e29b-41d4-a716-446655440000",
-      "street": "123 Main Street",
+      "streetAddress": "123 Main Street",
       "suburb": "Sydney",
       "state": "NSW",
       "postcode": "2000",
@@ -153,7 +161,7 @@ Authorization: Basic <base64(clientId:clientSecret)>
     {
       "userId": "user123",
       "addressId": "660f9501-f30c-52e5-b827-557766551111",
-      "street": "456 Business Ave",
+      "streetAddress": "456 Business Ave",
       "suburb": "Sydney",
       "state": "NSW",
       "postcode": "2001",
@@ -217,13 +225,13 @@ Content-Type: application/json
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier |
-| addressId | string | Yes | Address ID to update |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
+| addressId | string | Yes | Address ID to update (UUID format - supports v1, v3, v4, v5) |
 
 **Request Body:** (all fields optional - include only fields to update)
 ```json
 {
-  "street": "789 Updated Street",
+  "streetAddress": "789 Updated Street",
   "suburb": "Melbourne",
   "state": "VIC",
   "postcode": "3000",
@@ -240,7 +248,7 @@ Content-Type: application/json
   "address": {
     "userId": "user123",
     "addressId": "550e8400-e29b-41d4-a716-446655440000",
-    "street": "789 Updated Street",
+    "streetAddress": "789 Updated Street",
     "suburb": "Melbourne",
     "state": "VIC",
     "postcode": "3000",
@@ -252,6 +260,13 @@ Content-Type: application/json
 }
 ```
 
+**Validation Rules (same as Create):**
+- `streetAddress`: Supports letters, numbers, spaces, and special characters: - ' . , #
+- `suburb`: Supports letters, numbers, spaces, and characters: - ' .
+- `state`: Must be a valid Australian state or territory code (NSW, VIC, QLD, WA, SA, TAS, ACT, NT)
+- `postcode`: Must be exactly 4 digits
+- `country`: Supports letters, numbers, spaces, and characters: - '
+
 **Error Responses:**
 
 **400 Bad Request** - No fields to update:
@@ -261,10 +276,10 @@ Content-Type: application/json
 }
 ```
 
-**400 Bad Request** - Invalid addressType:
+**400 Bad Request** - Invalid state code:
 ```json
 {
-  "message": "Invalid addressType. Must be one of: billing, mailing, residential, business"
+  "message": "state must be a valid Australian state code (NSW, VIC, QLD, WA, SA, TAS, ACT, NT)"
 }
 ```
 
@@ -309,8 +324,8 @@ Authorization: Basic <base64(clientId:clientSecret)>
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier |
-| addressId | string | Yes | Address ID to delete |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
+| addressId | string | Yes | Address ID to delete (UUID format - supports v1, v3, v4, v5) |
 
 **Response (204 No Content):**
 - No response body
@@ -325,16 +340,23 @@ Authorization: Basic <base64(clientId:clientSecret)>
 }
 ```
 
-**400 Bad Request** - Missing userId/addressId:
+**400 Bad Request** - Invalid userId format:
 ```json
 {
-  "message": "Missing userId or addressId"
+  "message": "Invalid userId format. Must be 1-128 characters with only alphanumeric characters, hyphens (-), and underscores (_)."
+}
+```
+
+**400 Bad Request** - Invalid addressId format:
+```json
+{
+  "message": "Invalid addressId format. Must be a valid UUID (v1, v3, v4, or v5)."
 }
 ```
 
 **Example Request (cURL):**
 ```bash
-curl -X DELETE https://api.../dev/v1/users/user123/addresses/550e8400-e29b-41d4-a716-446655440000 \
+curl -X DELETE https://api.../dev/v1/users/user_123/addresses/550e8400-e29b-41d4-a716-446655440000 \
   -u "clientId:clientSecret"
 ```
 

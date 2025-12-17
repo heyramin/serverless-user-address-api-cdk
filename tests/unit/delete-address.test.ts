@@ -15,7 +15,7 @@ describe('Delete Address Handler', () => {
     mockDocClient.send.mockResolvedValueOnce({});
 
     const event = {
-      pathParameters: { userId: 'user123', addressId: 'addr1' },
+      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: null,
     } as any;
 
@@ -27,7 +27,7 @@ describe('Delete Address Handler', () => {
 
   it('should return 400 for missing userId', async () => {
     const event = {
-      pathParameters: { addressId: 'addr1' },
+      pathParameters: { addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: null,
     } as any;
 

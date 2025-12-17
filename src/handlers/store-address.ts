@@ -2,7 +2,9 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import * as Joi from 'joi';
+import { isValidUserId } from '../utils/validation';
+import { Address } from '../types/address';
+import { addressCreationSchema } from '../schemas/address';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -10,28 +12,6 @@ let docClient = DynamoDBDocumentClient.from(ddbClient);
 export const setDocClient = (client: any) => {
   docClient = client;
 };
-
-const schema = Joi.object({
-  street: Joi.string().required(),
-  suburb: Joi.string().required(),
-  state: Joi.string().required(),
-  postcode: Joi.string().required(),
-  country: Joi.string().default('Australia'),
-  addressType: Joi.string().valid('billing', 'mailing', 'residential', 'business').optional(),
-});
-
-interface Address {
-  userId: string;
-  addressId: string;
-  street: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  country: string;
-  addressType?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -45,8 +25,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Validate userId format (prevent injection)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
     // Validate input
-    const { error, value } = schema.validate(body);
+    const { error, value } = addressCreationSchema.validate(body);
     if (error) {
       return {
         statusCode: 400,

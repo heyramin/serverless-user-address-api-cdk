@@ -13,9 +13,9 @@ describe('Update Address Handler', () => {
 
   it('should update an address with new values', async () => {
     const updatedAddress = {
-      userId: 'user123',
-      addressId: 'addr1',
-      street: '789 New St',
+      userId: 'user_123',
+      addressId: '550e8400-e29b-41d4-a716-446655440000',
+      streetAddress: '789 New St',
       suburb: 'Sydney',
       state: 'NSW',
       postcode: '2000',
@@ -28,9 +28,9 @@ describe('Update Address Handler', () => {
     mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
-      pathParameters: { userId: 'user123', addressId: 'addr1' },
+      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: JSON.stringify({
-        street: '789 New St',
+        streetAddress: '789 New St',
         addressType: 'mailing',
       }),
     } as any;
@@ -40,13 +40,13 @@ describe('Update Address Handler', () => {
     expect((response as any).statusCode).toBe(200);
     const body = JSON.parse((response as any).body);
     expect(body.message).toBe('Address updated successfully');
-    expect(body.addressId).toBe('addr1');
-    expect(body.address.street).toBe('789 New St');
+    expect(body.addressId).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(body.address.streetAddress).toBe('789 New St');
   });
 
   it('should return 400 when no fields to update', async () => {
     const event = {
-      pathParameters: { userId: 'user123', addressId: 'addr1' },
+      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: JSON.stringify({}),
     } as any;
 
@@ -54,12 +54,12 @@ describe('Update Address Handler', () => {
 
     expect((response as any).statusCode).toBe(400);
     const body = JSON.parse((response as any).body);
-    expect(body.message).toBe('No fields to update');
+    expect(body.message).toBe('"value" must have at least 1 key');
   });
 
   it('should return 400 for missing userId', async () => {
     const event = {
-      pathParameters: { addressId: 'addr1' },
+      pathParameters: { addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
@@ -72,7 +72,7 @@ describe('Update Address Handler', () => {
 
   it('should return 400 for missing addressId', async () => {
     const event = {
-      pathParameters: { userId: 'user123' },
+      pathParameters: { userId: 'user_123' },
       body: JSON.stringify({ suburb: 'Melbourne' }),
     } as any;
 
@@ -85,9 +85,9 @@ describe('Update Address Handler', () => {
 
   it('should update multiple fields', async () => {
     const updatedAddress = {
-      userId: 'user123',
-      addressId: 'addr1',
-      street: '789 New St',
+      userId: 'user_123',
+      addressId: '550e8400-e29b-41d4-a716-446655440000',
+      streetAddress: '789 New St',
       suburb: 'Melbourne',
       state: 'VIC',
       postcode: '3000',
@@ -100,9 +100,9 @@ describe('Update Address Handler', () => {
     mockDocClient.send.mockResolvedValueOnce({ Attributes: updatedAddress });
 
     const event = {
-      pathParameters: { userId: 'user123', addressId: 'addr1' },
+      pathParameters: { userId: 'user_123', addressId: '550e8400-e29b-41d4-a716-446655440000' },
       body: JSON.stringify({
-        street: '789 New St',
+        streetAddress: '789 New St',
         suburb: 'Melbourne',
         state: 'VIC',
         postcode: '3000',
