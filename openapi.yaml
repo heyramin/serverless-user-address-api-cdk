@@ -27,7 +27,9 @@ paths:
           schema:
             type: string
             pattern: '^[a-zA-Z0-9_-]+$'
-          description: Unique user identifier (alphanumeric, hyphens, underscores only)
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
       requestBody:
         required: true
         content:
@@ -64,7 +66,9 @@ paths:
           schema:
             type: string
             pattern: '^[a-zA-Z0-9_-]+$'
-          description: Unique user identifier (alphanumeric, hyphens, underscores only)
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: query
           name: suburb
           schema:
@@ -106,14 +110,16 @@ paths:
           schema:
             type: string
             pattern: '^[a-zA-Z0-9_-]+$'
-          description: Unique user identifier (alphanumeric, hyphens, underscores only)
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: path
           name: addressId
           required: true
           schema:
             type: string
             format: uuid
-          description: Unique address identifier (UUID format)
+          description: Unique address identifier (UUID format - supports v1, v3, v4, v5)
       requestBody:
         required: true
         content:
@@ -156,14 +162,16 @@ paths:
           schema:
             type: string
             pattern: '^[a-zA-Z0-9_-]+$'
-          description: Unique user identifier (alphanumeric, hyphens, underscores only)
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: path
           name: addressId
           required: true
           schema:
             type: string
             format: uuid
-          description: Unique address identifier (UUID format)
+          description: Unique address identifier (UUID format - supports v1, v3, v4, v5)
       responses:
         204:
           description: Address deleted successfully

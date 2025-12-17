@@ -25,7 +25,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    // Validate userId format (prevent SQL injection)
+    // Validate userId format (prevent injection)
     if (!isValidUserId(userId)) {
       return {
         statusCode: 400,

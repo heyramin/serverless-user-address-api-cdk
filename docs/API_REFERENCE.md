@@ -53,7 +53,7 @@ Content-Type: application/json
 | addressType | string | No | billing, mailing, residential, business | Type of address |
 
 **Validation Rules:**
-- `userId`: Only alphanumeric characters, hyphens (-), and underscores (_) allowed
+- `userId`: 1-128 characters, only alphanumeric characters, hyphens (-), and underscores (_) allowed
 - `streetAddress`: Supports letters, numbers, spaces, and special characters: - ' . , #
 - `suburb`: Supports letters, numbers, spaces, and characters: - ' .
 - `state`: Must be a valid Australian state or territory code
@@ -133,7 +133,7 @@ Authorization: Basic <base64(clientId:clientSecret)>
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier (alphanumeric, hyphens, underscores only) |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
@@ -225,8 +225,8 @@ Content-Type: application/json
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier (alphanumeric, hyphens, underscores only) |
-| addressId | string | Yes | Address ID to update (UUID format) |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
+| addressId | string | Yes | Address ID to update (UUID format - supports v1, v3, v4, v5) |
 
 **Request Body:** (all fields optional - include only fields to update)
 ```json
@@ -324,8 +324,8 @@ Authorization: Basic <base64(clientId:clientSecret)>
 **Path Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| userId | string | Yes | Unique user identifier (alphanumeric, hyphens, underscores only) |
-| addressId | string | Yes | Address ID to delete (UUID format) |
+| userId | string | Yes | Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only) |
+| addressId | string | Yes | Address ID to delete (UUID format - supports v1, v3, v4, v5) |
 
 **Response (204 No Content):**
 - No response body
@@ -343,14 +343,14 @@ Authorization: Basic <base64(clientId:clientSecret)>
 **400 Bad Request** - Invalid userId format:
 ```json
 {
-  "message": "Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed."
+  "message": "Invalid userId format. Must be 1-128 characters with only alphanumeric characters, hyphens (-), and underscores (_)."
 }
 ```
 
 **400 Bad Request** - Invalid addressId format:
 ```json
 {
-  "message": "Invalid addressId format. Must be a valid UUID."
+  "message": "Invalid addressId format. Must be a valid UUID (v1, v3, v4, or v5)."
 }
 ```
 

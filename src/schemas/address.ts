@@ -58,6 +58,8 @@ export const addressCreationSchema = Joi.object({
     .required()
     .pattern(/^\d{4}$/),
   country: Joi.string()
+    .min(1)
+    .max(128)
     .default('Australia')
     .custom((value, helpers) => {
       if (!isValidCountry(value)) {
@@ -119,6 +121,8 @@ export const addressUpdateSchema = Joi.object({
     .pattern(/^\d{4}$/)
     .optional(),
   country: Joi.string()
+    .min(1)
+    .max(128)
     .custom((value, helpers) => {
       if (!isValidCountry(value)) {
         return helpers.error('any.invalid');
@@ -126,7 +130,7 @@ export const addressUpdateSchema = Joi.object({
       return value;
     })
     .messages({
-      'any.invalid': 'country can only contain letters, numbers, spaces, hyphens, and apostrophes',
+      'any.invalid': 'country can only contain letters, numbers, spaces, hyphens, and apostrophes (1-128 characters)',
     })
     .optional(),
   addressType: Joi.string()
