@@ -4,6 +4,7 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId, isValidAddressId } from '../utils/validation';
 import { Address } from '../types/address';
 import { addressUpdateSchema } from '../schemas/address';
+import { createLogger } from '../utils/logger';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -12,7 +13,10 @@ export const setDocClient = (client: any) => {
   docClient = client;
 };
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event, context?) => {
+  const logger = createLogger(context || {});
+  logger.info('Update address handler started', { userId: event.pathParameters?.userId });
+
   try {
     const userId = event.pathParameters?.userId;
     const addressId = event.pathParameters?.addressId;
@@ -125,9 +129,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       }),
     };
   } catch (error: any) {
-    console.error('Error updating address:', error);
-    console.error('Error message:', error?.message);
-    console.error('Error code:', error?.Code);
+    logger.error('Error updating address', error, { errorCode: error?.Code });
     
     return {
       statusCode: 500,

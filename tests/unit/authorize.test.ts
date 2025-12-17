@@ -56,7 +56,7 @@ describe('Authorize Handler', () => {
       authorizationToken: '',
     };
 
-    await expect(handler(event as any)).rejects.toThrow('Unauthorized');
+    await expect(handler(event as any, {} as any)).rejects.toThrow('Unauthorized');
   });
 
   it('should reject invalid token format', async () => {
@@ -66,7 +66,7 @@ describe('Authorize Handler', () => {
       authorizationToken: 'InvalidToken',
     };
 
-    await expect(handler(event as any)).rejects.toThrow('Unauthorized');
+    await expect(handler(event as any, {} as any)).rejects.toThrow('Unauthorized');
   });
 
   it('should reject malformed Basic Auth credentials', async () => {
@@ -76,7 +76,7 @@ describe('Authorize Handler', () => {
       authorizationToken: `Basic ${Buffer.from('malformed').toString('base64')}`,
     };
 
-    await expect(handler(event as any)).rejects.toThrow('Unauthorized');
+    await expect(handler(event as any, {} as any)).rejects.toThrow('Unauthorized');
   });
 
   it('should reject invalid credentials for existing client', async () => {
@@ -107,7 +107,7 @@ describe('Authorize Handler', () => {
       authorizationToken: `Basic ${Buffer.from('unknownclient:testsecret').toString('base64')}`,
     };
 
-    await expect(handler(event as any)).rejects.toThrow('Unauthorized');
+    await expect(handler(event as any, {} as any)).rejects.toThrow('Unauthorized');
   });
 });
 

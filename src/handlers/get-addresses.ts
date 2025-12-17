@@ -3,6 +3,7 @@ import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId } from '../utils/validation';
 import { Address } from '../types/address';
+import { createLogger } from '../utils/logger';
 
 let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 let docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -11,13 +12,17 @@ export const setDocClient = (client: any) => {
   docClient = client;
 };
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event, context?) => {
+  const logger = createLogger(context || {});
+  logger.info('Get addresses handler started', { userId: event.pathParameters?.userId });
+
   try {
     const userId = event.pathParameters?.userId;
     const suburb = event.queryStringParameters?.suburb;
     const postcode = event.queryStringParameters?.postcode;
 
     if (!userId) {
+      logger.warn('Missing userId parameter');
       return {
         statusCode: 400,
         body: JSON.stringify({ message: 'Missing userId' }),
@@ -26,6 +31,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Validate userId format (prevent injection attacks)
     if (!isValidUserId(userId)) {
+      logger.warn('Invalid userId format', { userIdLength: userId.length });
       return {
         statusCode: 400,
         body: JSON.stringify({ 
@@ -34,28 +40,38 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Build query parameters
+    const queryParams: any = {
+      TableName: process.env.ADDRESSES_TABLE,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+      },
+    };
+
+    // Add FilterExpression for optional parameters
+    const filterExpressions: string[] = [];
+    if (suburb) {
+      filterExpressions.push('suburb = :suburb');
+      queryParams.ExpressionAttributeValues[':suburb'] = suburb;
+    }
+    if (postcode) {
+      filterExpressions.push('postcode = :postcode');
+      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
+    }
+
+    if (filterExpressions.length > 0) {
+      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    }
+
     // Query addresses for user
     const result = await docClient.send(
-      new QueryCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId,
-        },
-      })
+      new QueryCommand(queryParams)
     );
 
-    let addresses = result.Items as Address[];
+    const addresses = result.Items as Address[];
 
-    // Apply filters
-    if (suburb) {
-      addresses = addresses.filter((a) => a.suburb === suburb);
-    }
-
-    if (postcode) {
-      addresses = addresses.filter((a) => a.postcode === postcode);
-    }
-
+    logger.info('Addresses retrieved successfully', { count: addresses.length });
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -64,9 +80,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       }),
     };
   } catch (error: any) {
-    console.error('Error retrieving addresses:', error);
-    console.error('Error message:', error?.message);
-    console.error('Error code:', error?.Code);
+    logger.error('Error retrieving addresses', error, { errorCode: error?.Code });
     
     return {
       statusCode: 500,
