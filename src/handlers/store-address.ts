@@ -1,5 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { isValidUserId } from '../utils/validation';
@@ -54,6 +54,39 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
     const addressId = uuidv4();
     const now = new Date().toISOString();
     logger.debug('Generated address ID', { addressId });
+
+    // Check for duplicate address
+    const queryResult = await docClient.send(
+      new QueryCommand({
+        TableName: process.env.ADDRESSES_TABLE,
+        KeyConditionExpression: 'userId = :userId',
+        ExpressionAttributeValues: {
+          ':userId': userId,
+        },
+      })
+    );
+
+    const existingAddresses = queryResult.Items as Address[] || [];
+    const isDuplicate = existingAddresses.some(
+      (existing) =>
+        existing.streetAddress === value.streetAddress &&
+        existing.suburb === value.suburb &&
+        existing.state === value.state &&
+        existing.postcode === value.postcode &&
+        existing.country === value.country &&
+        existing.addressType === (value.addressType || null)
+    );
+
+    if (isDuplicate) {
+      logger.warn('Duplicate address attempt', { userId, address: value });
+      return {
+        statusCode: 409,
+        body: JSON.stringify({ 
+          message: 'An identical address already exists for this user',
+          error: 'DUPLICATE_ADDRESS'
+        }),
+      };
+    }
 
     const address: Address = {
       userId,

@@ -88,4 +88,81 @@ describe('Store Address Handler', () => {
     const body = JSON.parse((response as any).body);
     expect(body.address.country).toBe('Australia');
   });
+
+  it('should return 409 for duplicate address', async () => {
+    const existingAddress = {
+      userId: 'user_123',
+      addressId: 'existing-id',
+      streetAddress: '123 Main St',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+      addressType: 'residential',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+
+    // Mock QueryCommand response with existing address
+    mockDocClient.send.mockResolvedValueOnce({
+      Items: [existingAddress],
+    });
+
+    const event = {
+      pathParameters: { userId: 'user_123' },
+      body: JSON.stringify({
+        streetAddress: '123 Main St',
+        suburb: 'Sydney',
+        state: 'NSW',
+        postcode: '2000',
+        country: 'Australia',
+        addressType: 'residential',
+      }),
+    } as any;
+
+    const response = await (handler as any)(event);
+
+    expect((response as any).statusCode).toBe(409);
+    const body = JSON.parse((response as any).body);
+    expect(body.message).toBe('An identical address already exists for this user');
+    expect(body.error).toBe('DUPLICATE_ADDRESS');
+  });
+
+  it('should allow same street address for different users', async () => {
+    const existingAddress = {
+      userId: 'other_user',
+      addressId: 'other-id',
+      streetAddress: '123 Main St',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+
+    // First call: QueryCommand returns other user's address
+    // Second call: PutCommand succeeds
+    mockDocClient.send
+      .mockResolvedValueOnce({ Items: [existingAddress] })
+      .mockResolvedValueOnce({});
+
+    const event = {
+      pathParameters: { userId: 'user_123' },
+      body: JSON.stringify({
+        streetAddress: '123 Main St',
+        suburb: 'Sydney',
+        state: 'NSW',
+        postcode: '2000',
+        country: 'Australia',
+      }),
+    } as any;
+
+    const response = await (handler as any)(event);
+
+    // Should succeed because it's a different user
+    expect((response as any).statusCode).toBe(201);
+    const body = JSON.parse((response as any).body);
+    expect(body.address.userId).toBe('user_123');
+  });
 });
