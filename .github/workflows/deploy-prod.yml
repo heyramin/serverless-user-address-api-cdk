@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
@@ -38,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
@@ -76,7 +76,7 @@ jobs:
         run: |
           INIT_CLIENT_FUNCTION=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-prod --query 'Stacks[0].Outputs[?OutputKey==`InitClientFunctionName`].OutputValue' --output text --region ap-southeast-2)
           
-          PAYLOAD=$(echo -n '{"clientName":"Integration Test Client","description":"For CI/CD integration tests"}' | base64 -w 0)
+          PAYLOAD=$(echo -n '{"clientName":"BDD Test Client","description":"For BDD tests"}' | base64 -w 0)
           
           aws lambda invoke \
             --function-name $INIT_CLIENT_FUNCTION \
@@ -106,6 +106,14 @@ jobs:
           echo "test_client_id=$TEST_CLIENT_ID" >> $GITHUB_OUTPUT
           echo "test_client_secret=$TEST_CLIENT_SECRET" >> $GITHUB_OUTPUT
           echo "Test client created: $TEST_CLIENT_ID"
+
+      - name: Run BDD tests against deployed API
+        env:
+          API_ENDPOINT: ${{ steps.api.outputs.API_ENDPOINT }}
+          TEST_CLIENT_ID: ${{ steps.creds.outputs.test_client_id }}
+          TEST_CLIENT_SECRET: ${{ steps.creds.outputs.test_client_secret }}
+          AWS_REGION: ap-southeast-2
+        run: npm run test:bdd
 
       - name: Run integration tests
         env:
