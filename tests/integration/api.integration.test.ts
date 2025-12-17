@@ -172,8 +172,8 @@ describe('User Address API Integration Tests', () => {
       expect(response.data.message).toBe('"value" must have at least 1 key');
     });
 
-    it('should return 400 for missing addressId', async () => {
-      const response = await api.patch(`/v1/users/${userId}/addresses/non-existent`, {
+    it('should successfully update even if address does not exist (idempotent)', async () => {
+      const response = await api.patch(`/v1/users/${userId}/addresses/ffffffff-ffff-4fff-bfff-ffffffffffff`, {
         suburb: 'Brisbane',
       });
 
@@ -190,7 +190,7 @@ describe('User Address API Integration Tests', () => {
     });
 
     it('should return 204 even if address does not exist', async () => {
-      const response = await api.delete(`/v1/users/${userId}/addresses/non-existent`);
+      const response = await api.delete(`/v1/users/${userId}/addresses/ffffffff-ffff-4fff-bfff-ffffffffffff`);
 
       expect(response.status).toBe(204);
     });
@@ -204,7 +204,7 @@ describe('User Address API Integration Tests', () => {
       });
 
       const response = await unauthApi.post(`/v1/users/${userId}/addresses`, {
-        street: '789 Test Street',
+        streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -225,7 +225,7 @@ describe('User Address API Integration Tests', () => {
       });
 
       const response = await invalidApi.post(`/v1/users/${userId}/addresses`, {
-        street: '789 Test Street',
+        streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
