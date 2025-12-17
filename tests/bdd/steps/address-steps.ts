@@ -74,7 +74,7 @@ After(async function (this: AddressWorld) {
   for (const address of this.createdAddresses) {
     try {
       await this.httpClient?.delete(
-        `/users/${address.userId}/addresses/${address.addressId}`
+        `/v1/users/${address.userId}/addresses/${address.addressId}`
       );
     } catch (error) {
       // Log but don't fail cleanup if individual delete fails
@@ -103,7 +103,7 @@ Given('I am authenticated with valid credentials', async function (this: Address
 // Helper: Store address via API
 async function storeAddress(world: AddressWorld, addressData: any): Promise<void> {
   try {
-    const response = await world.httpClient!.post(`/users/${addressData.userId}/addresses`, {
+    const response = await world.httpClient!.post(`/v1/users/${addressData.userId}/addresses`, {
       streetAddress: addressData.streetAddress,
       suburb: addressData.suburb,
       state: addressData.state,
@@ -144,7 +144,7 @@ async function storeAddress(world: AddressWorld, addressData: any): Promise<void
 // Helper: Query addresses via API
 async function queryAddresses(world: AddressWorld, userId: string, postcode?: string): Promise<any[]> {
   try {
-    let url = `/users/${userId}/addresses`;
+    let url = `/v1/users/${userId}/addresses`;
     if (postcode) {
       url += `?postcode=${postcode}`;
     }
@@ -175,7 +175,7 @@ async function queryAddresses(world: AddressWorld, userId: string, postcode?: st
 async function deleteAddress(world: AddressWorld, userId: string, addressId: string): Promise<void> {
   try {
     const response = await world.httpClient!.delete(
-      `/users/${userId}/addresses/${addressId}`
+      `/v1/users/${userId}/addresses/${addressId}`
     );
     world.currentResponse = response;
     
@@ -356,7 +356,7 @@ When('I update the address with the following changes:', async function (this: A
 
   try {
     const response = await this.httpClient!.patch(
-      `/users/${this.addressData.userId}/addresses/${this.lastAddressId}`,
+      `/v1/users/${this.addressData.userId}/addresses/${this.lastAddressId}`,
       updates
     );
 
@@ -420,7 +420,7 @@ Then('attempting to retrieve the address should return no results', async functi
 // Validation steps
 When('I attempt to store an address without a suburb', async function (this: AddressWorld) {
   try {
-    const response = await this.httpClient!.post(`/users/${this.userId}/addresses`, {
+    const response = await this.httpClient!.post(`/v1/users/${this.userId}/addresses`, {
       streetAddress: '123 Test Street',
       state: 'NSW',
       postcode: '2000',
