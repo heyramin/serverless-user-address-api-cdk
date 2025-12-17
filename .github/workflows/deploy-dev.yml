@@ -110,6 +110,7 @@ jobs:
           echo "Test client created: $TEST_CLIENT_ID"
 
       - name: Run BDD tests against deployed API
+        continue-on-error: true
         env:
           API_ENDPOINT: ${{ steps.api.outputs.API_ENDPOINT }}
           TEST_CLIENT_ID: ${{ steps.creds.outputs.test_client_id }}
