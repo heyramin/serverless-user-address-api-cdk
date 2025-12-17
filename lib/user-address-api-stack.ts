@@ -146,8 +146,8 @@ export class UserAddressApiStack extends cdk.Stack {
     const usagePlan = this.api.addUsagePlan('UsagePlan', {
       name: `user-address-api-plan-${env}`,
       throttle: {
-        rateLimit: env === 'prod' ? 1000 : 500,
-        burstLimit: env === 'prod' ? 2000 : 1000,
+        rateLimit: env === 'prod' ? 100 : 50,
+        burstLimit: env === 'prod' ? 200 : 100,
       },
     });
 

@@ -69,6 +69,58 @@ describe('Address Validation Schemas', () => {
       });
     });
 
+    it('should accept addressType with mixed case and convert to lowercase', () => {
+      const mixedCaseTypes = ['Residential', 'BILLING', 'Mailing', 'BUSINESS'];
+
+      mixedCaseTypes.forEach((type) => {
+        const address = {
+          streetAddress: '123 Main Street',
+          suburb: 'City',
+          state: 'NSW',
+          postcode: '2000',
+          addressType: type,
+        };
+
+        const { error, value } = addressCreationSchema.validate(address);
+        expect(error).toBeUndefined();
+        expect(value.addressType).toBe(type.toLowerCase()); // Should be converted to lowercase
+      });
+    });
+
+    it('should accept state with mixed case and convert to uppercase', () => {
+      const mixedCaseStates = ['nsw', 'Vic', 'qld', 'WA', 'sa', 'Tas', 'act', 'NT'];
+
+      mixedCaseStates.forEach((state) => {
+        const address = {
+          streetAddress: '123 Main Street',
+          suburb: 'City',
+          state,
+          postcode: '2000',
+        };
+
+        const { error, value } = addressCreationSchema.validate(address);
+        expect(error).toBeUndefined();
+        expect(value.state).toBe(state.toUpperCase()); // Should be converted to uppercase
+      });
+    });
+
+    it('should trim whitespace from string fields', () => {
+      const address = {
+        streetAddress: '  123 Main Street  ',
+        suburb: '  Sydney  ',
+        state: '  NSW  ',
+        postcode: '2000',
+        country: '  Australia  ',
+      };
+
+      const { error, value } = addressCreationSchema.validate(address);
+      expect(error).toBeUndefined();
+      expect(value.streetAddress).toBe('123 Main Street');
+      expect(value.suburb).toBe('Sydney');
+      expect(value.state).toBe('NSW');
+      expect(value.country).toBe('Australia');
+    });
+
     it('should accept street address with special characters', () => {
       const validAddresses = [
         '123 Main Street',

@@ -18,6 +18,7 @@ import {
 export const addressCreationSchema = Joi.object({
   streetAddress: Joi.string()
     .required()
+    .trim()
     .min(1)
     .max(256)
     .custom((value, helpers) => {
@@ -32,6 +33,7 @@ export const addressCreationSchema = Joi.object({
     }),
   suburb: Joi.string()
     .required()
+    .trim()
     .min(1)
     .max(128)
     .custom((value, helpers) => {
@@ -45,6 +47,8 @@ export const addressCreationSchema = Joi.object({
     }),
   state: Joi.string()
     .required()
+    .trim()
+    .uppercase()
     .custom((value, helpers) => {
       if (!isValidState(value)) {
         return helpers.error('any.invalid');
@@ -58,6 +62,7 @@ export const addressCreationSchema = Joi.object({
     .required()
     .pattern(/^\d{4}$/),
   country: Joi.string()
+    .trim()
     .min(1)
     .max(128)
     .default('Australia')
@@ -70,7 +75,10 @@ export const addressCreationSchema = Joi.object({
     .messages({
       'any.invalid': 'country can only contain letters, numbers, spaces, hyphens, and apostrophes',
     }),
-  addressType: Joi.string().valid('billing', 'mailing', 'residential', 'business').optional(),
+  addressType: Joi.string()
+    .lowercase()
+    .valid('billing', 'mailing', 'residential', 'business')
+    .optional(),
 });
 
 /**
@@ -80,6 +88,7 @@ export const addressCreationSchema = Joi.object({
  */
 export const addressUpdateSchema = Joi.object({
   streetAddress: Joi.string()
+    .trim()
     .min(1)
     .max(256)
     .custom((value, helpers) => {
@@ -94,6 +103,7 @@ export const addressUpdateSchema = Joi.object({
     })
     .optional(),
   suburb: Joi.string()
+    .trim()
     .min(1)
     .max(128)
     .custom((value, helpers) => {
@@ -107,6 +117,8 @@ export const addressUpdateSchema = Joi.object({
     })
     .optional(),
   state: Joi.string()
+    .trim()
+    .uppercase()
     .custom((value, helpers) => {
       if (!isValidState(value)) {
         return helpers.error('any.invalid');
@@ -121,6 +133,7 @@ export const addressUpdateSchema = Joi.object({
     .pattern(/^\d{4}$/)
     .optional(),
   country: Joi.string()
+    .trim()
     .min(1)
     .max(128)
     .custom((value, helpers) => {
@@ -134,6 +147,7 @@ export const addressUpdateSchema = Joi.object({
     })
     .optional(),
   addressType: Joi.string()
+    .lowercase()
     .valid('billing', 'mailing', 'residential', 'business')
     .optional(),
 }).min(1); // At least one field must be provided for update
