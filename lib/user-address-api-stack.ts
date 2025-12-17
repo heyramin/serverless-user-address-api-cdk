@@ -186,7 +186,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'AuthorizerFunction', {
       entry: path.join(__dirname, '../src/handlers/authorize.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
         CLIENTS_TABLE: `user-address-clients-${env}`,
@@ -207,7 +207,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'StoreAddressFunction', {
       entry: path.join(__dirname, '../src/handlers/store-address.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -225,7 +225,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'GetAddressesFunction', {
       entry: path.join(__dirname, '../src/handlers/get-addresses.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -246,7 +246,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'UpdateAddressFunction', {
       entry: path.join(__dirname, '../src/handlers/update-address.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -267,7 +267,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'DeleteAddressFunction', {
       entry: path.join(__dirname, '../src/handlers/delete-address.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -288,7 +288,7 @@ export class UserAddressApiStack extends cdk.Stack {
     const fn = new NodejsFunction(this, 'InitClientFunction', {
       entry: path.join(__dirname, '../src/handlers/init-client.ts'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       environment: {
         CLIENT_TABLE_NAME: this.clientsTable.tableName,
       },
