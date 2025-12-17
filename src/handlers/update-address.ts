@@ -94,7 +94,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     if (updates.length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'No fields to update' }),
+        body: JSON.stringify({ message: '"value" must have at least 1 key' }),
       };
     }
 
