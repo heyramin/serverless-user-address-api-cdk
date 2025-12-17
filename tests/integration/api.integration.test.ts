@@ -204,7 +204,7 @@ describe('User Address API Integration Tests', () => {
       });
 
       const response = await unauthApi.post(`/v1/users/${userId}/addresses`, {
-        street: '789 Test Street',
+        streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
@@ -225,7 +225,7 @@ describe('User Address API Integration Tests', () => {
       });
 
       const response = await invalidApi.post(`/v1/users/${userId}/addresses`, {
-        street: '789 Test Street',
+        streetAddress: '789 Test Street',
         suburb: 'Sydney',
         state: 'NSW',
         postcode: '2000',
