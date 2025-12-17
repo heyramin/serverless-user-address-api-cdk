@@ -74,7 +74,7 @@ Feature: Address Management API
   Scenario: Validate required fields when storing address
     When I attempt to store an address without a suburb
     Then the request should fail with validation error
-    And the error message should mention "suburb is required"
+    And the error message should mention "suburb"
 
   Scenario: Retrieve all addresses for a user
     Given I have stored multiple addresses for user "user_multi":

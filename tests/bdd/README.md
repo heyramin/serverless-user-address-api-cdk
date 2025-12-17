@@ -120,19 +120,22 @@ The step definitions are implemented in `tests/bdd/steps/address-steps.ts` and i
 
 ### World Object
 
-A `World` object maintains state across steps in a scenario:
-- `apiClient` - DynamoDB client
-- `currentResponse` - Last API response
-- `lastAddressId` - ID of most recent address
-- `addressData` - Current address being tested
-- `addresses` - List of addresses for cleanup
+An `AddressWorld` object (registered via `setWorldConstructor`) maintains isolated state for each scenario:
+- `httpClient` - Axios HTTP client with Basic Auth headers for API requests
+- `currentResponse` - Last HTTP response from the API
+- `lastAddressId` - ID of the most recently created address
+- `userId` - Test user ID (auto-generated per scenario)
+- `addressData` - Current address object being tested
+- `createdAddresses` - List of all addresses created during scenario for cleanup
+- `error` - Last error encountered
 
 ### Cleanup
 
 The `After` hook automatically:
-1. Removes all addresses created during the test
-2. Cleans up test data from DynamoDB
-3. Ensures no test data persists between scenarios
+1. Removes all addresses created during the test scenario
+2. Calls the API delete endpoint for each tracked address
+3. Ensures no test data persists between scenarios (prevents data pollution)
+4. Handles cleanup failures gracefully without failing the test
 
 ## Adding New Tests
 
@@ -140,23 +143,34 @@ To add new BDD tests:
 
 1. **Add scenarios** to `tests/bdd/features/address-management.feature`
 2. **Implement step definitions** in `tests/bdd/steps/address-steps.ts`
-3. **Run tests** with `npm run test:bdd`
-4. **Update CI/CD** workflows if testing new features
+3. **Use `this` context** to access AddressWorld properties
+4. **Run tests** with `npm run test:bdd`
+5. **Update CI/CD** workflows if testing new features
 
 Example step definition:
 
 ```typescript
-When('I perform action X', async function () {
+When('I perform action X', async function (this: AddressWorld, param: string) {
   try {
-    world.currentResponse = await world.apiClient.performAction(...);
+    const response = await this.httpClient.post(`/users/${this.userId}/addresses`, {
+      // request data
+    });
+    this.currentResponse = response;
+    if (response.status >= 200 && response.status < 300) {
+      // Extract data on success
+      this.lastAddressId = response.data?.addressId;
+    } else {
+      // Set error on failure
+      this.error = new Error(`API error ${response.status}`);
+    }
   } catch (error) {
-    world.error = error;
+    this.error = error;
   }
 });
 
-Then('the result should be Y', function () {
-  if (world.currentResponse.result !== 'Y') {
-    throw new Error(`Expected Y, got ${world.currentResponse.result}`);
+Then('the result should be Y', function (this: AddressWorld) {
+  if (this.currentResponse.data?.result !== 'Y') {
+    throw new Error(`Expected Y, got ${this.currentResponse.data?.result}`);
   }
 });
 ```
