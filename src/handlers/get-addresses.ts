@@ -34,27 +34,36 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Build query parameters
+    const queryParams: any = {
+      TableName: process.env.ADDRESSES_TABLE,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+      },
+    };
+
+    // Add FilterExpression for optional parameters
+    const filterExpressions: string[] = [];
+    if (suburb) {
+      filterExpressions.push('suburb = :suburb');
+      queryParams.ExpressionAttributeValues[':suburb'] = suburb;
+    }
+    if (postcode) {
+      filterExpressions.push('postcode = :postcode');
+      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
+    }
+
+    if (filterExpressions.length > 0) {
+      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    }
+
     // Query addresses for user
     const result = await docClient.send(
-      new QueryCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId,
-        },
-      })
+      new QueryCommand(queryParams)
     );
 
-    let addresses = result.Items as Address[];
-
-    // Apply filters
-    if (suburb) {
-      addresses = addresses.filter((a) => a.suburb === suburb);
-    }
-
-    if (postcode) {
-      addresses = addresses.filter((a) => a.postcode === postcode);
-    }
+    const addresses = result.Items as Address[];
 
     return {
       statusCode: 200,

@@ -1,14 +1,8 @@
 import * as crypto from 'crypto';
 import * as AWS from 'aws-sdk';
 
-let dynamodb: AWS.DynamoDB.DocumentClient;
-
-function getDynamoDBClient() {
-  if (!dynamodb) {
-    dynamodb = new AWS.DynamoDB.DocumentClient();
-  }
-  return dynamodb;
-}
+// Initialize DynamoDB client outside handler for connection reuse (avoid cold start)
+let dynamodb = new AWS.DynamoDB.DocumentClient();
 
 export function setDynamoDBClient(client: AWS.DynamoDB.DocumentClient) {
   dynamodb = client;
@@ -53,7 +47,7 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     const clientTableName = process.env.CLIENTS_TABLE || 'user-address-clients-dev';
     console.log('Querying table:', clientTableName);
     
-    const result = await getDynamoDBClient()
+    const result = await dynamodb
       .get({
         TableName: clientTableName,
         Key: { clientId },
