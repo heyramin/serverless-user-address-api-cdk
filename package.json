@@ -2,6 +2,9 @@
   "name": "serverless-user-address-api-cdk",
   "version": "1.0.0",
   "description": "Serverless User Address API built with AWS CDK",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
