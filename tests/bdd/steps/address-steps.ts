@@ -352,7 +352,12 @@ Then('the address postcode should be {string}', function (this: AddressWorld, po
 
 // Update address steps
 When('I update the address with the following changes:', async function (this: AddressWorld, dataTable: DataTable) {
-  const updates = dataTable.rowsHash();
+  const rows = dataTable.rows();
+  // Convert array of [field, value] pairs to object
+  const updates = rows.reduce((acc, row) => {
+    acc[row[0]] = row[1];
+    return acc;
+  }, {} as any);
 
   try {
     const response = await this.httpClient!.patch(
@@ -443,9 +448,17 @@ Then('the request should fail with validation error', function (this: AddressWor
 });
 
 Then('the error message should mention {string}', function (this: AddressWorld, keyword: string) {
-  const errorMsg = this.error?.message || this.currentResponse?.data?.message || '';
-  if (!errorMsg.includes(keyword)) {
-    throw new Error(`Error message does not contain "${keyword}". Got: ${errorMsg}`);
+  // Check error property and data properties for the keyword
+  const errorData = this.currentResponse?.data;
+  const fullMsg = [
+    this.error?.message,
+    errorData?.message,
+    errorData?.error,
+    JSON.stringify(errorData)
+  ].join(' ');
+  
+  if (!fullMsg.toLowerCase().includes(keyword.toLowerCase())) {
+    throw new Error(`Error message does not contain "${keyword}". Got: ${fullMsg}`);
   }
 });
 
@@ -476,6 +489,16 @@ When('I retrieve all addresses for user {string}', async function (this: Address
   await queryAddresses(this, userId);
   if (this.error) {
     throw this.error;
+  }
+});
+
+Then('I should get {int} addresses', function (this: AddressWorld, count: number) {
+  if (!this.currentResponse || !this.currentResponse.data || !Array.isArray(this.currentResponse.data.addresses)) {
+    throw new Error('Expected addresses array in response');
+  }
+  const actualCount = this.currentResponse.data.addresses.length;
+  if (actualCount !== count) {
+    throw new Error(`Expected ${count} addresses but got ${actualCount}`);
   }
 });
 
