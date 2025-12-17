@@ -24,6 +24,13 @@ jobs:
       - name: Run unit tests
         run: npm test -- --coverage
 
+      - name: Run BDD tests
+        env:
+          ADDRESSES_TABLE_NAME: user-addresses-dev
+          CLIENT_TABLE_NAME: user-address-clients-dev
+          AWS_REGION: ap-southeast-2
+        run: npm run test:bdd
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
         if: always()
