@@ -90,6 +90,7 @@ describe('Store Address Handler', () => {
   });
 
   it('should return 409 for duplicate address', async () => {
+    const now = new Date().toISOString();
     const existingAddress = {
       userId: 'user_123',
       addressId: 'existing-id',
@@ -99,8 +100,8 @@ describe('Store Address Handler', () => {
       postcode: '2000',
       country: 'Australia',
       addressType: 'residential',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Mock QueryCommand response with existing address
@@ -129,6 +130,7 @@ describe('Store Address Handler', () => {
   });
 
   it('should allow same street address for different users', async () => {
+    const now = new Date().toISOString();
     const existingAddress = {
       userId: 'other_user',
       addressId: 'other-id',
@@ -137,8 +139,8 @@ describe('Store Address Handler', () => {
       state: 'NSW',
       postcode: '2000',
       country: 'Australia',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
+      createdAt: now,
+      updatedAt: now,
     };
 
     // First call: QueryCommand returns other user's address
@@ -164,5 +166,125 @@ describe('Store Address Handler', () => {
     expect((response as any).statusCode).toBe(201);
     const body = JSON.parse((response as any).body);
     expect(body.address.userId).toBe('user_123');
+  });
+
+  it('should detect duplicates with leading/trailing whitespace', async () => {
+    const now = new Date().toISOString();
+    const existingAddress = {
+      userId: 'user_123',
+      addressId: 'existing-id',
+      streetAddress: '123 Main St',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+      addressType: 'residential',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Mock QueryCommand response with existing address
+    mockDocClient.send.mockResolvedValueOnce({
+      Items: [existingAddress],
+    });
+
+    const event = {
+      pathParameters: { userId: 'user_123' },
+      body: JSON.stringify({
+        streetAddress: '  123 Main St  ',
+        suburb: '  Sydney  ',
+        state: 'NSW',
+        postcode: '2000',
+        country: '  Australia  ',
+        addressType: 'residential',
+      }),
+    } as any;
+
+    const response = await (handler as any)(event);
+
+    // Should detect as duplicate after trimming whitespace
+    expect((response as any).statusCode).toBe(409);
+    const body = JSON.parse((response as any).body);
+    expect(body.error).toBe('DUPLICATE_ADDRESS');
+  });
+
+  it('should detect duplicates with case normalization (state uppercase, addressType lowercase)', async () => {
+    const now = new Date().toISOString();
+    const existingAddress = {
+      userId: 'user_123',
+      addressId: 'existing-id',
+      streetAddress: '123 Main St',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+      addressType: 'residential',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Mock QueryCommand response with existing address
+    mockDocClient.send.mockResolvedValueOnce({
+      Items: [existingAddress],
+    });
+
+    const event = {
+      pathParameters: { userId: 'user_123' },
+      body: JSON.stringify({
+        streetAddress: '123 Main St',
+        suburb: 'Sydney',
+        state: 'nsw',
+        postcode: '2000',
+        country: 'Australia',
+        addressType: 'RESIDENTIAL',
+      }),
+    } as any;
+
+    const response = await (handler as any)(event);
+
+    // Should detect as duplicate after normalization
+    expect((response as any).statusCode).toBe(409);
+    const body = JSON.parse((response as any).body);
+    expect(body.error).toBe('DUPLICATE_ADDRESS');
+  });
+
+  it('should NOT treat different cases in streetAddress/suburb/country as duplicates', async () => {
+    const now = new Date().toISOString();
+    const existingAddress = {
+      userId: 'user_123',
+      addressId: 'existing-id',
+      streetAddress: '123 Main St',
+      suburb: 'Sydney',
+      state: 'NSW',
+      postcode: '2000',
+      country: 'Australia',
+      addressType: 'residential',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Mock QueryCommand response with existing address
+    mockDocClient.send.mockResolvedValueOnce({
+      Items: [existingAddress],
+    });
+
+    const event = {
+      pathParameters: { userId: 'user_123' },
+      body: JSON.stringify({
+        streetAddress: '123 main st',
+        suburb: 'sydney',
+        state: 'NSW',
+        postcode: '2000',
+        country: 'australia',
+        addressType: 'residential',
+      }),
+    } as any;
+
+    const response = await (handler as any)(event);
+
+    // Should detect as duplicate because comparison is case-insensitive
+    expect((response as any).statusCode).toBe(409);
+    const body = JSON.parse((response as any).body);
+    expect(body.error).toBe('DUPLICATE_ADDRESS');
   });
 });

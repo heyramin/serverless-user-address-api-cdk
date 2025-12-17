@@ -83,8 +83,9 @@ DELETE /v1/users/{userId}/addresses/{addressId}
 The API automatically prevents users from creating duplicate addresses within their account:
 
 - **Per-User Validation**: Each user can only have one address with a specific combination of details
-- **Case-Insensitive Comparison**: Addresses are compared after normalizing case and trimming whitespace
-- **Compared Fields**: `streetAddress`, `suburb`, `state`, `postcode`, `country`, `addressType`, and `userId`
+- **Case-Insensitive Comparison**: Addresses are compared after normalizing to lowercase (e.g., "123 Main St" matches "123 main st")
+- **Whitespace Handling**: Whitespace is trimmed during schema validation before comparison
+- **Compared Fields**: `streetAddress`, `suburb`, `state`, `postcode`, `country`, `addressType`
 - **Error Response**: Returns HTTP 409 Conflict when a duplicate is detected with error code `DUPLICATE_ADDRESS`
 - **Cross-User Addresses**: Different users can have identical addresses without conflict
 

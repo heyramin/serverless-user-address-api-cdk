@@ -136,8 +136,9 @@ it('should return 409 for duplicate address', async () => {
 
 **Implementation Details:**
 - Uses DynamoDB `QueryCommand` to check existing user addresses
-- Compares normalized (lowercase, trimmed) field values
-- Case-insensitive matching for all text fields
+- Performs case-insensitive comparison by converting text fields to lowercase
+- Whitespace is trimmed during schema validation before duplicate check
+- Comparison includes all key address fields: streetAddress, suburb, state, postcode, country, addressType
 
 ### 2. Get Addresses Test
 

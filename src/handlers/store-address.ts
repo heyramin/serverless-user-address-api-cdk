@@ -69,11 +69,11 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
     const existingAddresses = queryResult.Items as Address[] || [];
     const isDuplicate = existingAddresses.some(
       (existing) =>
-        existing.streetAddress === value.streetAddress &&
-        existing.suburb === value.suburb &&
+        existing.streetAddress.toLowerCase() === value.streetAddress.toLowerCase() &&
+        existing.suburb.toLowerCase() === value.suburb.toLowerCase() &&
         existing.state === value.state &&
         existing.postcode === value.postcode &&
-        existing.country === value.country &&
+        existing.country.toLowerCase() === value.country.toLowerCase() &&
         existing.addressType === (value.addressType || null)
     );
 
