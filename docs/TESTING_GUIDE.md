@@ -75,70 +75,37 @@ tests/integration/
 - Validation of required fields (street, suburb, state, postcode)
 - UUID generation for addressId
 - Proper response structure
-- **Duplicate address prevention** - returns 409 Conflict for duplicate addresses
-- **Per-user duplicate check** - allows same address for different users
-- **Case-insensitive comparison** - detects duplicates regardless of case
-
-**Key Test Cases:**
-
-1. **Valid address creation:**
-   - Tests 201 Created response with addressId
-   - Validates address object structure
-
-2. **Duplicate address detection:**
-   - Compares streetAddress, suburb, state, postcode, country, and addressType
-   - Returns 409 Conflict with `DUPLICATE_ADDRESS` error code
-   - Message: "An identical address already exists for this user"
-
-3. **Cross-user duplicate handling:**
-   - Different users can create identical addresses
-   - Duplicate check is per-user only
-   - No conflict when userId differs
 
 **Example test:**
 ```typescript
-it('should return 409 for duplicate address', async () => {
-  const existingAddress = {
-    userId: 'user_123',
-    addressId: 'existing-id',
-    streetAddress: '123 Main St',
-    suburb: 'Sydney',
-    state: 'NSW',
-    postcode: '2000',
-    country: 'Australia',
-    addressType: 'residential'
-  };
-
-  // Mock QueryCommand for duplicate check
-  mockDocClient.send.mockResolvedValueOnce({
-    Items: [existingAddress]
+it('should create an address successfully', async () => {
+  const mockDynamoDbPutItem = jest.fn().mockReturnValueOnce({
+    promise: jest.fn().mockResolvedValueOnce({})
   });
 
+  AWS.DynamoDB.DocumentClient = jest.fn().mockImplementation(() => ({
+    put: mockDynamoDbPutItem
+  }));
+
+  const handler = require('../../src/handlers/store-address').handler;
+  
   const event = {
-    pathParameters: { userId: 'user_123' },
+    pathParameters: { userId: 'user123' },
     body: JSON.stringify({
-      streetAddress: '123 Main St',
+      street: '123 Main St',
       suburb: 'Sydney',
       state: 'NSW',
       postcode: '2000',
-      country: 'Australia',
       addressType: 'residential'
     })
   };
 
   const response = await handler(event);
   
-  expect(response.statusCode).toBe(409);
-  const body = JSON.parse(response.body);
-  expect(body.error).toBe('DUPLICATE_ADDRESS');
+  expect(response.statusCode).toBe(201);
+  expect(JSON.parse(response.body).message).toBe('Address created successfully');
 });
 ```
-
-**Implementation Details:**
-- Uses DynamoDB `QueryCommand` to check existing user addresses
-- Performs case-insensitive comparison by converting text fields to lowercase
-- Whitespace is trimmed during schema validation before duplicate check
-- Comparison includes all key address fields: streetAddress, suburb, state, postcode, country, addressType
 
 ### 2. Get Addresses Test
 
