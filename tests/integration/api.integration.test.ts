@@ -169,7 +169,7 @@ describe('User Address API Integration Tests', () => {
       const response = await api.patch(`/v1/users/${userId}/addresses/${addressId}`, {});
 
       expect(response.status).toBe(400);
-      expect(response.data.message).toBe('No fields to update');
+      expect(response.data.message).toBe('"value" must have at least 1 key');
     });
 
     it('should return 400 for missing addressId', async () => {
