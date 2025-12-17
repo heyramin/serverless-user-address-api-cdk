@@ -386,8 +386,13 @@ Then('the address should be updated successfully', function (this: AddressWorld)
 });
 
 Then('the updated address should contain:', function (this: AddressWorld, dataTable: DataTable) {
-  const expected = dataTable.rowsHash();
-  const data = this.currentResponse.data || {};
+  const rows = dataTable.rows();
+  // Convert array of [field, value] pairs to object
+  const expected = rows.reduce((acc, row) => {
+    acc[row[0]] = row[1];
+    return acc;
+  }, {} as any);
+  const data = this.currentResponse.data?.address || this.currentResponse.data || {};
 
   for (const [key, value] of Object.entries(expected)) {
     if (data[key] !== value) {
