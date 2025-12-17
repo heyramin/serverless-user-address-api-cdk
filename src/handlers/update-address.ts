@@ -2,7 +2,6 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId, isValidAddressId } from '../utils/validation';
-import { Address } from '../types/address';
 import { addressUpdateSchema } from '../schemas/address';
 import { createLogger } from '../utils/logger';
 
