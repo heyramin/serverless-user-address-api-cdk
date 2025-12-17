@@ -8,13 +8,15 @@ info:
     email: heyramin@gmail.com
 
 servers:
-  - url: https://api.example.com/v1
+  - url: https://api.example.com/prod
     description: Production
-  - url: http://localhost:3000/v1
+  - url: https://api.example.com/dev
     description: Development
+  - url: http://localhost:3000/dev
+    description: Local Development
 
 paths:
-  /users/{userId}/addresses:
+  /v1/users/{userId}/addresses:
     post:
       summary: Create a new address for a user
       operationId: createAddress
@@ -24,7 +26,10 @@ paths:
           required: true
           schema:
             type: string
-          description: Unique user identifier
+            pattern: '^[a-zA-Z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
       requestBody:
         required: true
         content:
@@ -60,7 +65,10 @@ paths:
           required: true
           schema:
             type: string
-          description: Unique user identifier
+            pattern: '^[a-zA-Z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: query
           name: suburb
           schema:
@@ -91,7 +99,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /users/{userId}/addresses/{addressId}:
+  /v1/users/{userId}/addresses/{addressId}:
     patch:
       summary: Update an existing address
       operationId: updateAddress
@@ -101,13 +109,17 @@ paths:
           required: true
           schema:
             type: string
-          description: Unique user identifier
+            pattern: '^[a-zA-Z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: path
           name: addressId
           required: true
           schema:
             type: string
-          description: Unique address identifier
+            format: uuid
+          description: Unique address identifier (UUID format - supports v1, v3, v4, v5)
       requestBody:
         required: true
         content:
@@ -149,13 +161,17 @@ paths:
           required: true
           schema:
             type: string
-          description: Unique user identifier
+            pattern: '^[a-zA-Z0-9_-]+$'
+            minLength: 1
+            maxLength: 128
+          description: Unique user identifier (1-128 characters, alphanumeric, hyphens, underscores only)
         - in: path
           name: addressId
           required: true
           schema:
             type: string
-          description: Unique address identifier
+            format: uuid
+          description: Unique address identifier (UUID format - supports v1, v3, v4, v5)
       responses:
         204:
           description: Address deleted successfully
@@ -179,26 +195,47 @@ components:
       properties:
         id:
           type: string
-          description: Unique address identifier
+          format: uuid
+          description: Unique address identifier (UUID format)
         userId:
           type: string
-          description: User ID associated with this address
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: User ID associated with this address (alphanumeric, hyphens, underscores only)
         streetAddress:
           type: string
-          description: Street address line
+          pattern: '^[a-zA-Z0-9\s\-''.,#]+$'
+          description: Street address line (supports numbers, letters, spaces, hyphens, apostrophes, periods, commas, and # symbols)
         suburb:
           type: string
-          description: Suburb or city name
+          pattern: '^[a-zA-Z0-9\s\-''.]+$'
+          description: Suburb or city name (letters, numbers, spaces, hyphens, apostrophes, periods)
         state:
           type: string
-          description: State abbreviation (e.g., NSW, VIC)
+          enum: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
+          description: Australian state/territory code
         postcode:
           type: string
-          description: Postal code
+          pattern: '^\d{4}$'
+          description: Australian postcode (4 digits)
         country:
           type: string
           default: Australia
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when address was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when address was last updated
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
         createdAt:
           type: string
           format: date-time
@@ -218,39 +255,65 @@ components:
       properties:
         streetAddress:
           type: string
-          description: Street address line
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9\s\-''.,#]+$'
+          description: Street address line (supports numbers, letters, spaces, hyphens, apostrophes, periods, commas, and # symbols)
         suburb:
           type: string
-          description: Suburb or city name
+          minLength: 1
+          maxLength: 128
+          pattern: '^[a-zA-Z0-9\s\-''.]+$'
+          description: Suburb or city name (letters, numbers, spaces, hyphens, apostrophes, periods)
         state:
           type: string
-          description: State abbreviation (e.g., NSW, VIC)
+          enum: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
+          description: Australian state/territory code
         postcode:
           type: string
-          description: Postal code
+          pattern: '^\d{4}$'
+          description: Australian postcode (4 digits)
         country:
           type: string
           default: Australia
+          minLength: 1
+          maxLength: 128
+          pattern: '^[a-zA-Z0-9\s\-'']+$'
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address
 
     AddressUpdate:
       type: object
       properties:
         streetAddress:
           type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9\s\-''.,#]+$'
           description: Street address line
         suburb:
           type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[a-zA-Z0-9\s\-''.]+$'
           description: Suburb or city name
         state:
           type: string
-          description: State abbreviation
+          enum: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
+          description: Australian state/territory code
         postcode:
           type: string
           description: Postal code
         country:
           type: string
           description: Country name
+        addressType:
+          type: string
+          enum: [billing, mailing, residential, business]
+          description: Type of address (billing, mailing, residential, or business)
 
     AddressResponse:
       type: object

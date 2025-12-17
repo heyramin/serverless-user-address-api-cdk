@@ -1,11 +1,22 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import { isValidUserId, isValidAddressId } from '../utils/validation';
+import { Address } from '../types/address';
+import { addressUpdateSchema } from '../schemas/address';
+import { createLogger } from '../utils/logger';
 
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(ddbClient);
+let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+let docClient = DynamoDBDocumentClient.from(ddbClient);
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const setDocClient = (client: any) => {
+  docClient = client;
+};
+
+export const handler: APIGatewayProxyHandler = async (event, context?) => {
+  const logger = createLogger(context || {});
+  logger.info('Update address handler started', { userId: event.pathParameters?.userId });
+
   try {
     const userId = event.pathParameters?.userId;
     const addressId = event.pathParameters?.addressId;
@@ -18,39 +29,81 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
+    // Validate userId and addressId format (prevent injection attacks)
+    if (!isValidUserId(userId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
+    if (!isValidAddressId(addressId)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid addressId format. Must be a valid UUID.' 
+        }),
+      };
+    }
+
+    // Validate request body against update schema
+    const { error, value } = addressUpdateSchema.validate(body);
+    if (error) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: error.details[0].message 
+        }),
+      };
+    }
+
     // Build update expression dynamically
     const updates: string[] = [];
     const values: Record<string, any> = {};
+    const names: Record<string, string> = {};
 
-    if (body.streetAddress) {
-      updates.push('streetAddress = :streetAddress');
-      values[':streetAddress'] = body.streetAddress;
+    if (value.streetAddress) {
+      updates.push('#streetAddress = :streetAddress');
+      names['#streetAddress'] = 'streetAddress';
+      values[':streetAddress'] = value.streetAddress;
     }
-    if (body.suburb) {
-      updates.push('suburb = :suburb');
-      values[':suburb'] = body.suburb;
+    if (value.suburb) {
+      updates.push('#suburb = :suburb');
+      names['#suburb'] = 'suburb';
+      values[':suburb'] = value.suburb;
     }
-    if (body.state) {
-      updates.push('state = :state');
-      values[':state'] = body.state;
+    if (value.addressType) {
+      updates.push('#addressType = :addressType');
+      names['#addressType'] = 'addressType';
+      values[':addressType'] = value.addressType;
     }
-    if (body.postcode) {
-      updates.push('postcode = :postcode');
-      values[':postcode'] = body.postcode;
+    if (value.state) {
+      updates.push('#state = :state');
+      names['#state'] = 'state';
+      values[':state'] = value.state;
     }
-    if (body.country) {
-      updates.push('country = :country');
-      values[':country'] = body.country;
+    if (value.postcode) {
+      updates.push('#postcode = :postcode');
+      names['#postcode'] = 'postcode';
+      values[':postcode'] = value.postcode;
+    }
+    if (value.country) {
+      updates.push('#country = :country');
+      names['#country'] = 'country';
+      values[':country'] = value.country;
     }
 
     if (updates.length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'No fields to update' }),
+        body: JSON.stringify({ message: '"value" must have at least 1 key' }),
       };
     }
 
-    updates.push('updatedAt = :updatedAt');
+    updates.push('#updatedAt = :updatedAt');
+    names['#updatedAt'] = 'updatedAt';
     values[':updatedAt'] = new Date().toISOString();
 
     const result = await docClient.send(
@@ -61,6 +114,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           addressId,
         },
         UpdateExpression: `SET ${updates.join(', ')}`,
+        ExpressionAttributeNames: names,
         ExpressionAttributeValues: values,
         ReturnValues: 'ALL_NEW',
       })
@@ -74,11 +128,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         addressId,
       }),
     };
-  } catch (error) {
-    console.error('Error:', error);
+  } catch (error: any) {
+    logger.error('Error updating address', error, { errorCode: error?.Code });
+    
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error' }),
+      body: JSON.stringify({ 
+        message: 'Internal server error',
+        error: error?.message || 'Unknown error',
+      }),
     };
   }
 };

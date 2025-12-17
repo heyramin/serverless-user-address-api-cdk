@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -24,12 +25,16 @@ export class UserAddressApiStack extends cdk.Stack {
 
     const env = props.environment;
 
-    // Create KMS key for encryption
+    // Create KMS key for encryption (shared by all DynamoDB tables in this stack)
     this.kmsKey = new kms.Key(this, 'AddressesTableKey', {
       description: 'KMS key for DynamoDB encryption',
       enableKeyRotation: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      pendingWindow: cdk.Duration.days(7), // 7-day waiting period for key deletion
     });
+
+    // Add alias for easier identification (reflects shared use across multiple tables)
+    this.kmsKey.addAlias(`alias/user-address-api-${env}`);
 
     // Create DynamoDB table for addresses
     this.table = new dynamodb.Table(this, 'AddressesTable', {
@@ -47,10 +52,10 @@ export class UserAddressApiStack extends cdk.Stack {
       encryptionKey: this.kmsKey,
       pointInTimeRecovery: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      stream: dynamodb.StreamSpecification.NEW_AND_OLD_IMAGES,
     });
 
     // Add GSI for suburb/postcode filtering
+    // Note: addressType field is now supported but doesn't require a GSI unless filtering by address type is needed
     this.table.addGlobalSecondaryIndex({
       indexName: 'suburbIndex',
       partitionKey: {
@@ -84,7 +89,7 @@ export class UserAddressApiStack extends cdk.Stack {
       description: 'User Address API',
       cloudWatchRole: true,
       deployOptions: {
-        stageName: 'v1',
+        stageName: env, // dev or prod
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: true,
         metricsEnabled: true,
@@ -106,31 +111,32 @@ export class UserAddressApiStack extends cdk.Stack {
     const deleteAddressFunction = this.createDeleteAddressFunction(env);
     const initClientFunction = this.createInitClientFunction(env);
 
-    // Create API endpoints
-    const usersResource = this.api.root.addResource('users');
+    // Create API endpoints with versioning
+    const versionResource = this.api.root.addResource('v1');
+    const usersResource = versionResource.addResource('users');
     const userIdResource = usersResource.addResource('{userId}');
     const addressesResource = userIdResource.addResource('addresses');
     const addressIdResource = addressesResource.addResource('{addressId}');
 
-    // POST /users/{id}/addresses
+    // POST /v1/users/{id}/addresses
     addressesResource.addMethod('POST', new apigateway.LambdaIntegration(storeAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // GET /users/{id}/addresses
+    // GET /v1/users/{id}/addresses
     addressesResource.addMethod('GET', new apigateway.LambdaIntegration(getAddressesFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // PATCH /users/{id}/addresses/{addressId}
+    // PATCH /v1/users/{id}/addresses/{addressId}
     addressIdResource.addMethod('PATCH', new apigateway.LambdaIntegration(updateAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    // DELETE /users/{id}/addresses/{addressId}
+    // DELETE /v1/users/{id}/addresses/{addressId}
     addressIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteAddressFunction), {
       authorizer: this.authorizer,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
@@ -140,8 +146,8 @@ export class UserAddressApiStack extends cdk.Stack {
     const usagePlan = this.api.addUsagePlan('UsagePlan', {
       name: `user-address-api-plan-${env}`,
       throttle: {
-        rateLimit: env === 'prod' ? 1000 : 500,
-        burstLimit: env === 'prod' ? 2000 : 1000,
+        rateLimit: env === 'prod' ? 100 : 50,
+        burstLimit: env === 'prod' ? 200 : 100,
       },
     });
 
@@ -177,33 +183,31 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createAuthorizerFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'AuthorizerFunction', {
+    const fn = new NodejsFunction(this, 'AuthorizerFunction', {
+      entry: path.join(__dirname, '../src/handlers/authorize.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'authorize.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         CLIENTS_TABLE: `user-address-clients-${env}`,
+      },
+      bundling: {
+        nodeModules: ['aws-sdk'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Grant access to clients table
-    const clientsTable = dynamodb.Table.fromTableName(
-      this,
-      'ClientsTable',
-      `user-address-clients-${env}`
-    );
-    clientsTable.grantReadData(fn);
+    this.clientsTable.grantReadData(fn);
 
     return fn;
   }
 
   private createStoreAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'StoreAddressFunction', {
+    const fn = new NodejsFunction(this, 'StoreAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/store-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'store-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
@@ -218,13 +222,16 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createGetAddressesFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'GetAddressesFunction', {
+    const fn = new NodejsFunction(this, 'GetAddressesFunction', {
+      entry: path.join(__dirname, '../src/handlers/get-addresses.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'get-addresses.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
+      },
+      bundling: {
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -236,13 +243,16 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createUpdateAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'UpdateAddressFunction', {
+    const fn = new NodejsFunction(this, 'UpdateAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/update-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'update-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
+      },
+      bundling: {
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -254,13 +264,16 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createDeleteAddressFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'DeleteAddressFunction', {
+    const fn = new NodejsFunction(this, 'DeleteAddressFunction', {
+      entry: path.join(__dirname, '../src/handlers/delete-address.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'delete-address.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
       timeout: cdk.Duration.seconds(30),
       environment: {
         ADDRESSES_TABLE: this.table.tableName,
+      },
+      bundling: {
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -272,13 +285,15 @@ export class UserAddressApiStack extends cdk.Stack {
   }
 
   private createInitClientFunction(env: string): lambda.Function {
-    const fn = new lambda.Function(this, 'InitClientFunction', {
+    const fn = new NodejsFunction(this, 'InitClientFunction', {
+      entry: path.join(__dirname, '../src/handlers/init-client.ts'),
+      handler: 'handler',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'init-client.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/handlers')),
-      timeout: cdk.Duration.seconds(30),
       environment: {
         CLIENT_TABLE_NAME: this.clientsTable.tableName,
+      },
+      bundling: {
+        nodeModules: ['aws-sdk'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -288,3 +303,4 @@ export class UserAddressApiStack extends cdk.Stack {
 
     return fn;
   }
+}

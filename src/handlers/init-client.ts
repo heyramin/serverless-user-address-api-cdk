@@ -17,12 +17,17 @@
  * IMPROVEMENT: Implement client credential expiration
  */
 
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
+import { createLogger } from '../utils/logger';
 
-const dynamodb = new AWS.DynamoDB.DocumentClient();
+// Allow dependency injection for testing
+let dynamodb = new AWS.DynamoDB.DocumentClient();
+
+export const setDynamoDBClient = (client: any) => {
+  dynamodb = client;
+};
 
 interface ClientRequest {
   clientName: string;
@@ -44,21 +49,19 @@ function generateSecret(): string {
   return crypto.randomBytes(24).toString('hex');
 }
 
-export const handler = async (event: ClientRequest | APIGatewayProxyEvent): Promise<any> => {
+export const handler = async (event: ClientRequest, context?: any): Promise<any> => {
+  const logger = createLogger(context || {});
+  logger.info('Initialize client handler started', { clientName: event.clientName });
+
   try {
     const clientTableName = process.env.CLIENT_TABLE_NAME!;
 
-    // Check if this is direct Lambda invocation (ClientRequest) or API Gateway (APIGatewayProxyEvent)
-    const body =
-      'clientName' in event ? event : JSON.parse((event as APIGatewayProxyEvent).body || '{}');
-
-    if (!body.clientName) {
-      const error = {
-        statusCode: 400,
-        body: JSON.stringify({ message: 'clientName is required' }),
-      };
-      return 'statusCode' in event ? error : { error: 'clientName is required' };
+    if (!event.clientName) {
+      logger.warn('Missing clientName in request');
+      throw new Error('clientName is required');
     }
+
+    const body = event;
 
     // Generate new credentials
     const clientId = `cli_${uuidv4()}`;
@@ -72,8 +75,8 @@ export const handler = async (event: ClientRequest | APIGatewayProxyEvent): Prom
       description: body.description || '',
       active: true,
       createdAt: new Date().toISOString(),
-      // Client credentials expire after 1 year
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      // Client credentials expire after 2 day
+      expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     await dynamodb
@@ -96,10 +99,10 @@ export const handler = async (event: ClientRequest | APIGatewayProxyEvent): Prom
       )}`,
     };
 
-    console.log(`✅ Client created: ${clientId}`);
+    logger.info('Client created successfully', { clientId, clientName: body.clientName });
     return response;
   } catch (error) {
-    console.error('Error creating client:', error);
+    logger.error('Error creating client', error as Error);
     throw error;
   }
 };

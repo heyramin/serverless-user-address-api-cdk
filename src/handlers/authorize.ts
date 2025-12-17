@@ -1,4 +1,13 @@
 import * as crypto from 'crypto';
+import * as AWS from 'aws-sdk';
+import { createLogger } from '../utils/logger';
+
+// Initialize DynamoDB client outside handler for connection reuse (avoid cold start)
+let dynamodb = new AWS.DynamoDB.DocumentClient();
+
+export function setDynamoDBClient(client: AWS.DynamoDB.DocumentClient) {
+  dynamodb = client;
+}
 
 export interface ApiGatewayTokenAuthorizerEvent {
   type: string;
@@ -6,13 +15,16 @@ export interface ApiGatewayTokenAuthorizerEvent {
   authorizationToken: string;
 }
 
-export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<any> {
+export async function handler(event: ApiGatewayTokenAuthorizerEvent, context?: any): Promise<any> {
+  const logger = createLogger(context || {});
+  logger.info('Authorization handler started', { methodArn: event.methodArn });
+  
   try {
-    console.log('Authorizing request:', event.methodArn);
-
     const token = event.authorizationToken;
+    logger.debug('Token validation started', { tokenPresent: !!token });
 
     if (!token || !token.startsWith('Basic ')) {
+      logger.warn('Invalid authorization header');
       throw new Error('Unauthorized');
     }
 
@@ -20,17 +32,39 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
     const [clientId, clientSecret] = credentials.split(':');
 
     if (!clientId || !clientSecret) {
-      throw new Error('Invalid credentials format');
+      logger.warn('Invalid credentials format');
+      throw new Error('Unauthorized');
     }
 
     // Hash the secret with SHA-256
     const hashedSecret = crypto.createHash('sha256').update(clientSecret).digest('hex');
 
-    console.log('Client ID:', clientId);
-    console.log('Hashed secret:', hashedSecret);
+    logger.debug('Credentials extracted', { clientId, hashedSecretLength: hashedSecret.length });
 
-    // In a real scenario, validate against DynamoDB clients table
-    // For now, we'll accept any non-empty credentials
+    // Validate against DynamoDB clients table
+    const clientTableName = process.env.CLIENTS_TABLE || 'user-address-clients-dev';
+    logger.debug('Querying clients table', { tableName: clientTableName });
+    
+    const result = await dynamodb
+      .get({
+        TableName: clientTableName,
+        Key: { clientId },
+      })
+      .promise();
+
+    logger.debug('DynamoDB query completed', { clientFound: !!result.Item });
+
+    if (!result.Item) {
+      logger.warn('Client not found in database', { clientId });
+      throw new Error('Unauthorized');
+    }
+
+    // Verify the hashed secret matches
+    if (result.Item.clientSecret !== hashedSecret) {
+      logger.warn('Invalid credentials for client', { clientId, secretMatch: false });
+      throw new Error('Unauthorized');
+    }
+
     const principalId = clientId;
 
     const policy = {
@@ -50,10 +84,10 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent): Promise<an
       },
     };
 
-    console.log('Authorization successful for client:', clientId);
+    logger.info('Authorization successful', { clientId });
     return policy;
-  } catch (error) {
-    console.error('Authorization failed:', error);
-    throw new Error('Unauthorized');
+  } catch (error: any) {
+    logger.error('Authorization failed', error, { errorType: error?.constructor?.name });
+    throw error;
   }
 }

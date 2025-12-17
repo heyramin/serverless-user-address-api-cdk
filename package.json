@@ -11,9 +11,11 @@
     "cdk:deploy:dev": "cdk deploy --context environment=dev",
     "cdk:deploy:prod": "cdk deploy --context environment=prod",
     "cdk:destroy": "cdk destroy",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:integration": "jest --testMatch='**/*.integration.test.ts'",
+    "test": "jest --testPathIgnorePatterns=integration",
+    "test:unit": "jest --testPathIgnorePatterns=integration",
+    "test:watch": "jest --watch --testPathIgnorePatterns=integration",
+    "test:integration": "jest --testMatch='**/integration/**/*.test.ts'",
+    "test:all": "jest",
     "lint": "eslint src/**/*.ts"
   },
   "keywords": [

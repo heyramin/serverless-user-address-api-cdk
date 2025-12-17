@@ -33,9 +33,6 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -54,21 +51,68 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
 
+      - name: Get AWS Account ID
+        id: account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+
       - name: Deploy to dev
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ steps.account.outputs.account_id }}
         run: npm run cdk:deploy:dev -- --require-approval never
 
       - name: Export API endpoint
         id: api
         run: |
-          API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-dev --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text --region ap-southeast-2)
+          API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-dev --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' --output text --region ap-southeast-2)
           echo "API_ENDPOINT=$API_ENDPOINT" >> $GITHUB_OUTPUT
           echo "API endpoint: $API_ENDPOINT"
+
+      - name: Create test client credentials
+        id: creds
+        run: |
+          INIT_CLIENT_FUNCTION=$(aws cloudformation describe-stacks --stack-name UserAddressApiStack-v2-dev --query 'Stacks[0].Outputs[?OutputKey==`InitClientFunctionName`].OutputValue' --output text --region ap-southeast-2)
+          
+          PAYLOAD=$(echo -n '{"clientName":"Integration Test Client","description":"For CI/CD integration tests"}' | base64 -w 0)
+          
+          aws lambda invoke \
+            --function-name $INIT_CLIENT_FUNCTION \
+            --payload $PAYLOAD \
+            --region ap-southeast-2 \
+            /tmp/response.json
+          
+          # Check if Lambda returned an error
+          if grep -q "FunctionError" /tmp/response.json; then
+            echo "Lambda returned an error:"
+            cat /tmp/response.json
+            exit 1
+          fi
+          
+          RESPONSE=$(cat /tmp/response.json)
+          echo "Lambda response: $RESPONSE"
+          
+          TEST_CLIENT_ID=$(echo $RESPONSE | grep -o '"clientId":"[^"]*' | cut -d'"' -f4)
+          TEST_CLIENT_SECRET=$(echo $RESPONSE | grep -o '"clientSecret":"[^"]*' | cut -d'"' -f4)
+          
+          if [ -z "$TEST_CLIENT_ID" ] || [ -z "$TEST_CLIENT_SECRET" ]; then
+            echo "Failed to extract credentials from Lambda response"
+            echo "Full response: $RESPONSE"
+            exit 1
+          fi
+          
+          echo "test_client_id=$TEST_CLIENT_ID" >> $GITHUB_OUTPUT
+          echo "test_client_secret=$TEST_CLIENT_SECRET" >> $GITHUB_OUTPUT
+          echo "Test client created: $TEST_CLIENT_ID"
 
       - name: Run integration tests
         env:
           API_ENDPOINT: ${{ steps.api.outputs.API_ENDPOINT }}
+          TEST_CLIENT_ID: ${{ steps.creds.outputs.test_client_id }}
+          TEST_CLIENT_SECRET: ${{ steps.creds.outputs.test_client_secret }}
           AWS_REGION: ap-southeast-2
         run: npm run test:integration

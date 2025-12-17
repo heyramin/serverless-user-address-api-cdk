@@ -2,46 +2,49 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import * as Joi from 'joi';
+import { isValidUserId } from '../utils/validation';
+import { Address } from '../types/address';
+import { addressCreationSchema } from '../schemas/address';
+import { createLogger } from '../utils/logger';
 
-const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(ddbClient);
+let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+let docClient = DynamoDBDocumentClient.from(ddbClient);
 
-const schema = Joi.object({
-  streetAddress: Joi.string().required(),
-  suburb: Joi.string().required(),
-  state: Joi.string().required(),
-  postcode: Joi.string().required(),
-  country: Joi.string().default('Australia'),
-});
+export const setDocClient = (client: any) => {
+  docClient = client;
+};
 
-interface Address {
-  userId: string;
-  addressId: string;
-  streetAddress: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  country: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export const handler: APIGatewayProxyHandler = async (event, context?) => {
+  const logger = createLogger(context || {});
+  logger.info('Store address handler started', { userId: event.pathParameters?.userId });
 
-export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     const userId = event.pathParameters?.userId;
     const body = JSON.parse(event.body || '{}');
 
     if (!userId) {
+      logger.warn('Missing userId parameter');
       return {
         statusCode: 400,
         body: JSON.stringify({ message: 'Missing userId' }),
       };
     }
 
+    // Validate userId format (prevent injection)
+    if (!isValidUserId(userId)) {
+      logger.warn('Invalid userId format', { userIdLength: userId.length });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
     // Validate input
-    const { error, value } = schema.validate(body);
+    const { error, value } = addressCreationSchema.validate(body);
     if (error) {
+      logger.warn('Validation failed', { error: error.message });
       return {
         statusCode: 400,
         body: JSON.stringify({ message: 'Validation failed', error: error.message }),
@@ -50,6 +53,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const addressId = uuidv4();
     const now = new Date().toISOString();
+    logger.debug('Generated address ID', { addressId });
 
     const address: Address = {
       userId,
@@ -66,6 +70,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       })
     );
 
+    logger.info('Address created successfully', { userId, addressId });
     return {
       statusCode: 201,
       body: JSON.stringify({
@@ -74,11 +79,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         address,
       }),
     };
-  } catch (error) {
-    console.error('Error:', error);
+  } catch (error: any) {
+    logger.error('Error creating address', error, { errorCode: error?.Code });
+    
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error' }),
+      body: JSON.stringify({ 
+        message: 'Internal server error',
+        error: error?.message || 'Unknown error',
+      }),
     };
   }
 };
