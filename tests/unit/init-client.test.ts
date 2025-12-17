@@ -52,9 +52,7 @@ describe('Init Client Handler', () => {
       description: 'No client name',
     } as any;
 
-    const response = await handler(event);
-
-    expect(response.error).toBe('clientName is required');
+    await expect(handler(event)).rejects.toThrow('clientName is required');
   });
 
   it('should store hashed secret in database', async () => {
@@ -92,17 +90,16 @@ describe('Init Client Handler', () => {
     expect(decoded).toContain(response.clientSecret);
   });
 
-  it('should handle API Gateway invocation', async () => {
+  it('should handle direct Lambda invocation', async () => {
     const event = {
-      body: JSON.stringify({
-        clientName: 'API Gateway Client',
-      }),
-    } as any;
+      clientName: 'Direct Lambda Client',
+    };
 
     const response = await handler(event);
 
     expect(response.message).toBe('Client created successfully');
-    expect(response.statusCode).toBeUndefined(); // Direct invocation returns object without statusCode
+    expect(response.clientId).toBeDefined();
+    expect(response.clientSecret).toBeDefined();
     expect(mockDynamoDBClient.put).toHaveBeenCalled();
   });
 });

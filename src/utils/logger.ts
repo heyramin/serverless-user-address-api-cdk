@@ -31,6 +31,7 @@ interface LogEntry {
 export class Logger {
   private functionName: string;
   private requestId: string;
+  private additionalContext: LogContext = {};
 
   constructor(functionName: string, requestId?: string) {
     this.functionName = functionName;
@@ -68,7 +69,7 @@ export class Logger {
     for (const key in data) {
       if (data.hasOwnProperty(key)) {
         const lowerKey = key.toLowerCase();
-        const isSensitive = sensitiveKeys.some((sensitive) => lowerKey.includes(sensitive));
+        const isSensitive = sensitiveKeys.some((sensitive) => lowerKey.includes(sensitive.toLowerCase()));
 
         if (isSensitive) {
           sanitized[key] = '[REDACTED]';
@@ -110,7 +111,8 @@ export class Logger {
    * Log info level message
    */
   public info(message: string, context?: LogContext): void {
-    const sanitizedContext = context ? this.sanitize(context) : undefined;
+    const mergedContext = { ...this.additionalContext, ...context };
+    const sanitizedContext = mergedContext && Object.keys(mergedContext).length > 0 ? this.sanitize(mergedContext) : undefined;
     const entry = this.createLogEntry(LogLevel.INFO, message, sanitizedContext);
     this.output(entry);
   }
@@ -119,7 +121,8 @@ export class Logger {
    * Log warning level message
    */
   public warn(message: string, context?: LogContext): void {
-    const sanitizedContext = context ? this.sanitize(context) : undefined;
+    const mergedContext = { ...this.additionalContext, ...context };
+    const sanitizedContext = mergedContext && Object.keys(mergedContext).length > 0 ? this.sanitize(mergedContext) : undefined;
     const entry = this.createLogEntry(LogLevel.WARN, message, sanitizedContext);
     this.output(entry);
   }
@@ -140,7 +143,8 @@ export class Logger {
       errorInfo = { errorMessage: error };
     }
 
-    const sanitizedContext = context ? this.sanitize(context) : undefined;
+    const mergedContext = { ...this.additionalContext, ...context };
+    const sanitizedContext = mergedContext && Object.keys(mergedContext).length > 0 ? this.sanitize(mergedContext) : undefined;
     const entry = this.createLogEntry(LogLevel.ERROR, message, {
       ...sanitizedContext,
       ...errorInfo,
@@ -152,7 +156,8 @@ export class Logger {
    * Log debug level message
    */
   public debug(message: string, context?: LogContext): void {
-    const sanitizedContext = context ? this.sanitize(context) : undefined;
+    const mergedContext = { ...this.additionalContext, ...context };
+    const sanitizedContext = mergedContext && Object.keys(mergedContext).length > 0 ? this.sanitize(mergedContext) : undefined;
     const entry = this.createLogEntry(LogLevel.DEBUG, message, sanitizedContext);
     this.output(entry);
   }
@@ -162,8 +167,7 @@ export class Logger {
    */
   public withContext(context: LogContext): Logger {
     const logger = new Logger(this.functionName, this.requestId);
-    // Store context for use in all log calls
-    (logger as any).additionalContext = context;
+    logger.additionalContext = { ...this.additionalContext, ...context };
     return logger;
   }
 }
