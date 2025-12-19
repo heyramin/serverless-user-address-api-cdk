@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
-import { isValidUserId } from '../utils/validation';
+import { isValidUserId, isValidPostcode, isValidSuburb } from '../utils/validation';
 import { Address } from '../types/address';
 import { createLogger } from '../utils/logger';
 
@@ -36,6 +36,28 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
         statusCode: 400,
         body: JSON.stringify({ 
           message: 'Invalid userId format. Only alphanumeric characters, hyphens (-), and underscores (_) are allowed.' 
+        }),
+      };
+    }
+
+    // Validate suburb if provided
+    if (suburb && !isValidSuburb(suburb)) {
+      logger.warn('Invalid suburb format', { suburb });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid suburb format. Only alphanumeric characters, spaces, hyphens, apostrophes, and periods are allowed.' 
+        }),
+      };
+    }
+
+    // Validate postcode if provided
+    if (postcode && !isValidPostcode(postcode)) {
+      logger.warn('Invalid postcode format', { postcode });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid postcode format. Postcode must be exactly 4 digits.' 
         }),
       };
     }
@@ -82,7 +104,7 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
 
     const addresses = result.Items as Address[];
 
-    logger.info('Addresses retrieved successfully', { count: addresses.length });
+    logger.info('Addresses retrieved successfully', { count: addresses.length, usedIndex: indexName || 'main-table' });
     return {
       statusCode: 200,
       body: JSON.stringify({
