@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
-import { isValidUserId } from '../utils/validation';
+import { isValidUserId, isValidPostcode, isValidSuburb } from '../utils/validation';
 import { Address } from '../types/address';
 import { createLogger } from '../utils/logger';
 
@@ -40,28 +40,61 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
       };
     }
 
+    // Validate suburb if provided
+    if (suburb && !isValidSuburb(suburb)) {
+      logger.warn('Invalid suburb format', { suburb });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid suburb format. Only alphanumeric characters, spaces, hyphens, apostrophes, and periods are allowed.' 
+        }),
+      };
+    }
+
+    // Validate postcode if provided
+    if (postcode && !isValidPostcode(postcode)) {
+      logger.warn('Invalid postcode format', { postcode });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid postcode format. Postcode must be exactly 4 digits.' 
+        }),
+      };
+    }
+
+    // Determine which index to use based on filter parameters
+    let indexName: string | undefined;
+    let keyConditionExpression = 'userId = :userId';
+    const expressionAttributeValues: any = {
+      ':userId': userId,
+    };
+
+    // Use appropriate GSI if filtering by suburb or postcode
+    if (suburb) {
+      indexName = 'suburbIndex';
+      keyConditionExpression = 'userId = :userId AND suburb = :suburb';
+      expressionAttributeValues[':suburb'] = suburb;
+    } else if (postcode) {
+      indexName = 'postcodeIndex';
+      keyConditionExpression = 'userId = :userId AND postcode = :postcode';
+      expressionAttributeValues[':postcode'] = postcode;
+    }
+
     // Build query parameters
     const queryParams: any = {
       TableName: process.env.ADDRESSES_TABLE,
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-      },
+      KeyConditionExpression: keyConditionExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
     };
 
-    // Add FilterExpression for optional parameters
-    const filterExpressions: string[] = [];
-    if (suburb) {
-      filterExpressions.push('suburb = :suburb');
-      queryParams.ExpressionAttributeValues[':suburb'] = suburb;
-    }
-    if (postcode) {
-      filterExpressions.push('postcode = :postcode');
-      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
+    if (indexName) {
+      queryParams.IndexName = indexName;
     }
 
-    if (filterExpressions.length > 0) {
-      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    // Add FilterExpression if filtering by postcode when suburb is also provided
+    if (suburb && postcode) {
+      queryParams.FilterExpression = 'postcode = :postcode';
+      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
     }
 
     // Query addresses for user
@@ -71,7 +104,7 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
 
     const addresses = result.Items as Address[];
 
-    logger.info('Addresses retrieved successfully', { count: addresses.length });
+    logger.info('Addresses retrieved successfully', { count: addresses.length, usedIndex: indexName || 'main-table' });
     return {
       statusCode: 200,
       body: JSON.stringify({

@@ -83,3 +83,15 @@ export const isValidCountry = (country: string): boolean => {
   const countryPattern = /^[a-zA-Z0-9\s\-']+$/;
   return countryPattern.test(country) && country.trim().length > 0;
 };
+
+/**
+ * Validates Australian postcode format
+ * Valid format: 4 digits (0000-9999)
+ * @param postcode The postcode to validate
+ * @returns true if valid, false otherwise
+ */
+export const isValidPostcode = (postcode: string): boolean => {
+  // Australian postcodes are exactly 4 digits
+  const postcodePattern = /^\d{4}$/;
+  return postcodePattern.test(postcode);
+};

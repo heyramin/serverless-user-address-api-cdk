@@ -69,6 +69,20 @@ export class UserAddressApiStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    // Add GSI for postcode filtering
+    this.table.addGlobalSecondaryIndex({
+      indexName: 'postcodeIndex',
+      partitionKey: {
+        name: 'userId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'postcode',
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // Create DynamoDB table for API clients
     this.clientsTable = new dynamodb.Table(this, 'ClientsTable', {
       tableName: `user-address-clients-${env}`,
