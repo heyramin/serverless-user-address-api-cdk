@@ -40,28 +40,39 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
       };
     }
 
+    // Determine which index to use based on filter parameters
+    let indexName: string | undefined;
+    let keyConditionExpression = 'userId = :userId';
+    const expressionAttributeValues: any = {
+      ':userId': userId,
+    };
+
+    // Use appropriate GSI if filtering by suburb or postcode
+    if (suburb) {
+      indexName = 'suburbIndex';
+      keyConditionExpression = 'userId = :userId AND suburb = :suburb';
+      expressionAttributeValues[':suburb'] = suburb;
+    } else if (postcode) {
+      indexName = 'postcodeIndex';
+      keyConditionExpression = 'userId = :userId AND postcode = :postcode';
+      expressionAttributeValues[':postcode'] = postcode;
+    }
+
     // Build query parameters
     const queryParams: any = {
       TableName: process.env.ADDRESSES_TABLE,
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-      },
+      KeyConditionExpression: keyConditionExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
     };
 
-    // Add FilterExpression for optional parameters
-    const filterExpressions: string[] = [];
-    if (suburb) {
-      filterExpressions.push('suburb = :suburb');
-      queryParams.ExpressionAttributeValues[':suburb'] = suburb;
-    }
-    if (postcode) {
-      filterExpressions.push('postcode = :postcode');
-      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
+    if (indexName) {
+      queryParams.IndexName = indexName;
     }
 
-    if (filterExpressions.length > 0) {
-      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    // Add FilterExpression if filtering by postcode when suburb is also provided
+    if (suburb && postcode) {
+      queryParams.FilterExpression = 'postcode = :postcode';
+      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
     }
 
     // Query addresses for user
