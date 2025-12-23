@@ -1,39 +1,21 @@
 import * as crypto from 'crypto';
-import * as AWS from 'aws-sdk';
-import { handler, setDynamoDBClient } from '../../src/handlers/authorize';
+import { handler, setDocClient } from '../../src/handlers/authorize';
+import * as dbClients from '../../src/db/clients';
 
-jest.mock('aws-sdk');
+jest.mock('../../src/db/clients');
 
 describe('Authorize Handler', () => {
-  let mockDynamoDB: any;
-  let mockGet: jest.Mock;
-  let mockPromise: jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockPromise = jest.fn();
-    mockGet = jest.fn(() => ({
-      promise: mockPromise,
-    }));
-
-    mockDynamoDB = {
-      get: mockGet,
-    };
-
-    (AWS.DynamoDB.DocumentClient as jest.Mock).mockImplementation(() => mockDynamoDB);
-    setDynamoDBClient(mockDynamoDB);
   });
 
   it('should authorize valid Basic Auth credentials', async () => {
     const clientSecret = 'testsecret';
     const hashedSecret = crypto.createHash('sha256').update(clientSecret).digest('hex');
 
-    mockPromise.mockResolvedValueOnce({
-      Item: {
-        clientId: 'testclient',
-        clientSecret: hashedSecret,
-      },
+    (dbClients.getClient as jest.Mock).mockResolvedValueOnce({
+      clientId: 'testclient',
+      clientSecret: hashedSecret,
     });
 
     const event = {
@@ -82,11 +64,9 @@ describe('Authorize Handler', () => {
   it('should reject invalid credentials for existing client', async () => {
     const hashedSecret = crypto.createHash('sha256').update('correctsecret').digest('hex');
 
-    mockPromise.mockResolvedValueOnce({
-      Item: {
-        clientId: 'testclient',
-        clientSecret: hashedSecret,
-      },
+    (dbClients.getClient as jest.Mock).mockResolvedValueOnce({
+      clientId: 'testclient',
+      clientSecret: hashedSecret,
     });
 
     const event = {
@@ -99,7 +79,7 @@ describe('Authorize Handler', () => {
   });
 
   it('should reject non-existent client', async () => {
-    mockPromise.mockResolvedValueOnce({});
+    (dbClients.getClient as jest.Mock).mockResolvedValueOnce(undefined);
 
     const event = {
       type: 'TOKEN',

@@ -2,19 +2,16 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'test-uuid-1234'),
 }));
 
-import { handler, setDynamoDBClient } from '../../src/handlers/init-client';
+jest.mock('../../src/db/clients');
+
+import { handler } from '../../src/handlers/init-client';
+import * as dbClients from '../../src/db/clients';
 
 describe('Init Client Handler', () => {
-  let mockDynamoDBClient: any;
-
   beforeEach(() => {
-    mockDynamoDBClient = {
-      put: jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue({}),
-      }),
-    };
-    setDynamoDBClient(mockDynamoDBClient);
+    jest.clearAllMocks();
     process.env.CLIENT_TABLE_NAME = 'test-clients-table';
+    (dbClients.createClient as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('should create a new client with valid request', async () => {
@@ -31,7 +28,7 @@ describe('Init Client Handler', () => {
     expect(response.clientName).toBe('Test Client');
     expect(response.createdAt).toBeDefined();
     expect(response.warning).toBe('Save the clientSecret now - it cannot be retrieved later');
-    expect(mockDynamoDBClient.put).toHaveBeenCalled();
+    expect(dbClients.createClient).toHaveBeenCalled();
   });
 
   it('should create client without description', async () => {
@@ -44,7 +41,7 @@ describe('Init Client Handler', () => {
     expect(response.message).toBe('Client created successfully');
     expect(response.clientId).toBeDefined();
     expect(response.clientSecret).toBeDefined();
-    expect(mockDynamoDBClient.put).toHaveBeenCalled();
+    expect(dbClients.createClient).toHaveBeenCalled();
   });
 
   it('should return error for missing clientName', async () => {
@@ -62,16 +59,15 @@ describe('Init Client Handler', () => {
 
     await handler(event);
 
-    expect(mockDynamoDBClient.put).toHaveBeenCalled();
-    const callArgs = mockDynamoDBClient.put.mock.calls[0][0];
-    const storedItem = callArgs.Item;
+    expect(dbClients.createClient).toHaveBeenCalled();
+    const callArgs = (dbClients.createClient as jest.Mock).mock.calls[0][0];
 
     // Verify the stored secret is hashed (not plain text)
-    expect(storedItem.clientSecret).toBeDefined();
-    expect(storedItem.clientSecret.length).toBe(64); // SHA-256 hex length
-    expect(storedItem.active).toBe(true);
-    expect(storedItem.createdAt).toBeDefined();
-    expect(storedItem.expiresAt).toBeDefined();
+    expect(callArgs.clientSecret).toBeDefined();
+    expect(callArgs.clientSecret.length).toBe(64); // SHA-256 hex length
+    expect(callArgs.active).toBe(true);
+    expect(callArgs.createdAt).toBeDefined();
+    expect(callArgs.expiresAt).toBeDefined();
   });
 
   it('should generate valid Basic auth header', async () => {
@@ -100,6 +96,6 @@ describe('Init Client Handler', () => {
     expect(response.message).toBe('Client created successfully');
     expect(response.clientId).toBeDefined();
     expect(response.clientSecret).toBeDefined();
-    expect(mockDynamoDBClient.put).toHaveBeenCalled();
+    expect(dbClients.createClient).toHaveBeenCalled();
   });
 });

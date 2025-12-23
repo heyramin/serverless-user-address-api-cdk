@@ -1,16 +1,10 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
-import { isValidUserId } from '../utils/validation';
+import { isValidUserId, isValidSuburb, isValidPostcode } from '../utils/validation';
 import { Address } from '../types/address';
 import { createLogger } from '../utils/logger';
+import { setDocClient, queryAddresses } from '../db';
 
-let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-let docClient = DynamoDBDocumentClient.from(ddbClient);
-
-export const setDocClient = (client: any) => {
-  docClient = client;
-};
+export { setDocClient };
 
 export const handler: APIGatewayProxyHandler = async (event, context?) => {
   const logger = createLogger(context || {});
@@ -40,36 +34,30 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
       };
     }
 
-    // Build query parameters
-    const queryParams: any = {
-      TableName: process.env.ADDRESSES_TABLE,
-      KeyConditionExpression: 'userId = :userId',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-      },
-    };
-
-    // Add FilterExpression for optional parameters
-    const filterExpressions: string[] = [];
-    if (suburb) {
-      filterExpressions.push('suburb = :suburb');
-      queryParams.ExpressionAttributeValues[':suburb'] = suburb;
-    }
-    if (postcode) {
-      filterExpressions.push('postcode = :postcode');
-      queryParams.ExpressionAttributeValues[':postcode'] = postcode;
+    // Validate suburb if provided
+    if (suburb && !isValidSuburb(suburb)) {
+      logger.warn('Invalid suburb format', { suburb });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid suburb format. Only alphanumeric characters, spaces, hyphens, apostrophes, and periods are allowed.' 
+        }),
+      };
     }
 
-    if (filterExpressions.length > 0) {
-      queryParams.FilterExpression = filterExpressions.join(' AND ');
+    // Validate postcode if provided
+    if (postcode && !isValidPostcode(postcode)) {
+      logger.warn('Invalid postcode format', { postcode });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          message: 'Invalid postcode format. Postcode must be exactly 4 digits.' 
+        }),
+      };
     }
 
     // Query addresses for user
-    const result = await docClient.send(
-      new QueryCommand(queryParams)
-    );
-
-    const addresses = result.Items as Address[];
+    const addresses = await queryAddresses(userId, suburb, postcode);
 
     logger.info('Addresses retrieved successfully', { count: addresses.length });
     return {

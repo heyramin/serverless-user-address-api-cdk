@@ -1,18 +1,12 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { isValidUserId } from '../utils/validation';
 import { Address } from '../types/address';
 import { addressCreationSchema } from '../schemas/address';
 import { createLogger } from '../utils/logger';
+import { setDocClient, queryAddresses, storeAddress } from '../db';
 
-let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-let docClient = DynamoDBDocumentClient.from(ddbClient);
-
-export const setDocClient = (client: any) => {
-  docClient = client;
-};
+export { setDocClient };
 
 export const handler: APIGatewayProxyHandler = async (event, context?) => {
   const logger = createLogger(context || {});
@@ -56,17 +50,7 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
     logger.debug('Generated address ID', { addressId });
 
     // Check for duplicate address
-    const queryResult = await docClient.send(
-      new QueryCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId,
-        },
-      })
-    );
-
-    const existingAddresses = queryResult.Items as Address[] || [];
+    const existingAddresses = await queryAddresses(userId);
     const isDuplicate = existingAddresses.some(
       (existing) =>
         existing.streetAddress.toLowerCase() === value.streetAddress.toLowerCase() &&
@@ -96,12 +80,7 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
       updatedAt: now,
     };
 
-    await docClient.send(
-      new PutCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        Item: address,
-      })
-    );
+    await storeAddress(address);
 
     logger.info('Address created successfully', { userId, addressId });
     return {

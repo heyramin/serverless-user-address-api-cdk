@@ -1,16 +1,10 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId, isValidAddressId } from '../utils/validation';
 import { addressUpdateSchema } from '../schemas/address';
 import { createLogger } from '../utils/logger';
+import { setDocClient, updateAddress } from '../db';
 
-let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-let docClient = DynamoDBDocumentClient.from(ddbClient);
-
-export const setDocClient = (client: any) => {
-  docClient = client;
-};
+export { setDocClient };
 
 export const handler: APIGatewayProxyHandler = async (event, context?) => {
   const logger = createLogger(context || {});
@@ -59,71 +53,59 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
     }
 
     // Build update expression dynamically
-    const updates: string[] = [];
-    const values: Record<string, any> = {};
+    const updates: Record<string, any> = {};
     const names: Record<string, string> = {};
+    const expressions: string[] = [];
 
     if (value.streetAddress) {
-      updates.push('#streetAddress = :streetAddress');
+      updates[':streetAddress'] = value.streetAddress;
       names['#streetAddress'] = 'streetAddress';
-      values[':streetAddress'] = value.streetAddress;
+      expressions.push('#streetAddress = :streetAddress');
     }
     if (value.suburb) {
-      updates.push('#suburb = :suburb');
+      updates[':suburb'] = value.suburb;
       names['#suburb'] = 'suburb';
-      values[':suburb'] = value.suburb;
+      expressions.push('#suburb = :suburb');
     }
     if (value.addressType) {
-      updates.push('#addressType = :addressType');
+      updates[':addressType'] = value.addressType;
       names['#addressType'] = 'addressType';
-      values[':addressType'] = value.addressType;
+      expressions.push('#addressType = :addressType');
     }
     if (value.state) {
-      updates.push('#state = :state');
+      updates[':state'] = value.state;
       names['#state'] = 'state';
-      values[':state'] = value.state;
+      expressions.push('#state = :state');
     }
     if (value.postcode) {
-      updates.push('#postcode = :postcode');
+      updates[':postcode'] = value.postcode;
       names['#postcode'] = 'postcode';
-      values[':postcode'] = value.postcode;
+      expressions.push('#postcode = :postcode');
     }
     if (value.country) {
-      updates.push('#country = :country');
+      updates[':country'] = value.country;
       names['#country'] = 'country';
-      values[':country'] = value.country;
+      expressions.push('#country = :country');
     }
 
-    if (updates.length === 0) {
+    if (expressions.length === 0) {
       return {
         statusCode: 400,
         body: JSON.stringify({ message: '"value" must have at least 1 key' }),
       };
     }
 
-    updates.push('#updatedAt = :updatedAt');
+    updates[':updatedAt'] = new Date().toISOString();
     names['#updatedAt'] = 'updatedAt';
-    values[':updatedAt'] = new Date().toISOString();
+    expressions.push('#updatedAt = :updatedAt');
 
-    const result = await docClient.send(
-      new UpdateCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        Key: {
-          userId,
-          addressId,
-        },
-        UpdateExpression: `SET ${updates.join(', ')}`,
-        ExpressionAttributeNames: names,
-        ExpressionAttributeValues: values,
-        ReturnValues: 'ALL_NEW',
-      })
-    );
+    const updatedAddress = await updateAddress(userId, addressId, updates, names, expressions.join(', '));
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         message: 'Address updated successfully',
-        address: result.Attributes,
+        address: updatedAddress,
         addressId,
       }),
     };

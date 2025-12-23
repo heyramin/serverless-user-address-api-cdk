@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
-import * as AWS from 'aws-sdk';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 
 describe('User Address API Integration Tests', () => {
   let api: AxiosInstance;
@@ -9,7 +10,7 @@ describe('User Address API Integration Tests', () => {
   const clientId = process.env.TEST_CLIENT_ID || 'test-client';
   const clientSecret = process.env.TEST_CLIENT_SECRET || 'test-secret';
   const awsRegion = process.env.AWS_REGION || 'ap-southeast-2';
-  let dynamodb: AWS.DynamoDB.DocumentClient;
+  let dynamodb: DynamoDBDocumentClient;
 
   beforeAll(() => {
     const apiEndpoint = process.env.API_ENDPOINT;
@@ -30,7 +31,8 @@ describe('User Address API Integration Tests', () => {
     userId = `test-user-${Date.now()}`;
     
     // Initialize DynamoDB client for cleanup
-    dynamodb = new AWS.DynamoDB.DocumentClient({ region: awsRegion });
+    const dynamoDBClient = new DynamoDBClient({ region: awsRegion });
+    dynamodb = DynamoDBDocumentClient.from(dynamoDBClient);
   });
 
   afterAll(async () => {
@@ -38,24 +40,24 @@ describe('User Address API Integration Tests', () => {
     try {
       // Delete all created addresses
       for (const addrId of addressIds) {
-        await dynamodb
-          .delete({
+        await dynamodb.send(
+          new DeleteCommand({
             TableName: process.env.ADDRESSES_TABLE || 'user-addresses-dev',
             Key: { userId, addressId: addrId },
           })
-          .promise();
+        );
       }
       console.log(`✓ Cleaned up ${addressIds.length} test addresses`);
 
       // Delete test client if it was created during tests
       if (clientId.startsWith('cli_')) {
         try {
-          await dynamodb
-            .delete({
+          await dynamodb.send(
+            new DeleteCommand({
               TableName: process.env.CLIENTS_TABLE || 'user-address-clients-dev',
               Key: { clientId },
             })
-            .promise();
+          );
           console.log('✓ Cleaned up test client credentials');
         } catch (error: any) {
           // Client might not exist if it was provided externally

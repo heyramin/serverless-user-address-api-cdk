@@ -1,15 +1,9 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { isValidUserId, isValidAddressId } from '../utils/validation';
 import { createLogger } from '../utils/logger';
+import { setDocClient, deleteAddress } from '../db';
 
-let ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-let docClient = DynamoDBDocumentClient.from(ddbClient);
-
-export const setDocClient = (client: any) => {
-  docClient = client;
-};
+export { setDocClient };
 
 export const handler: APIGatewayProxyHandler = async (event, context?) => {
   const logger = createLogger(context || {});
@@ -45,15 +39,7 @@ export const handler: APIGatewayProxyHandler = async (event, context?) => {
       };
     }
 
-    await docClient.send(
-      new DeleteCommand({
-        TableName: process.env.ADDRESSES_TABLE,
-        Key: {
-          userId,
-          addressId,
-        },
-      })
-    );
+    await deleteAddress(userId, addressId);
 
     return {
       statusCode: 204,

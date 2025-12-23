@@ -1,13 +1,8 @@
 import * as crypto from 'crypto';
-import * as AWS from 'aws-sdk';
 import { createLogger } from '../utils/logger';
+import { setDocClient, getClient } from '../db';
 
-// Initialize DynamoDB client outside handler for connection reuse (avoid cold start)
-let dynamodb = new AWS.DynamoDB.DocumentClient();
-
-export function setDynamoDBClient(client: AWS.DynamoDB.DocumentClient) {
-  dynamodb = client;
-}
+export { setDocClient };
 
 export interface ApiGatewayTokenAuthorizerEvent {
   type: string;
@@ -42,25 +37,10 @@ export async function handler(event: ApiGatewayTokenAuthorizerEvent, context?: a
     logger.debug('Credentials extracted', { clientId, hashedSecretLength: hashedSecret.length });
 
     // Validate against DynamoDB clients table
-    const clientTableName = process.env.CLIENTS_TABLE || 'user-address-clients-dev';
-    logger.debug('Querying clients table', { tableName: clientTableName });
+    logger.debug('Querying clients table');
     
-    const result = await dynamodb
-      .get({
-        TableName: clientTableName,
-        Key: { clientId },
-      })
-      .promise();
-
-    logger.debug('DynamoDB query completed', { clientFound: !!result.Item });
-
-    if (!result.Item) {
-      logger.warn('Client not found in database', { clientId });
-      throw new Error('Unauthorized');
-    }
-
-    // Verify the hashed secret matches
-    if (result.Item.clientSecret !== hashedSecret) {
+    const client = await getClient(clientId);
+    if (!client || client.clientSecret !== hashedSecret) {
       logger.warn('Invalid credentials for client', { clientId, secretMatch: false });
       throw new Error('Unauthorized');
     }

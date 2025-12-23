@@ -17,17 +17,13 @@
  * IMPROVEMENT: Implement client credential expiration
  */
 
-import * as AWS from 'aws-sdk';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '../utils/logger';
+import { setDocClient, createClient } from '../db';
 
-// Allow dependency injection for testing
-let dynamodb = new AWS.DynamoDB.DocumentClient();
-
-export const setDynamoDBClient = (client: any) => {
-  dynamodb = client;
-};
+export { setDocClient };
 
 interface ClientRequest {
   clientName: string;
@@ -54,8 +50,6 @@ export const handler = async (event: ClientRequest, context?: any): Promise<any>
   logger.info('Initialize client handler started', { clientName: event.clientName });
 
   try {
-    const clientTableName = process.env.CLIENT_TABLE_NAME!;
-
     if (!event.clientName) {
       logger.warn('Missing clientName in request');
       throw new Error('clientName is required');
@@ -79,12 +73,7 @@ export const handler = async (event: ClientRequest, context?: any): Promise<any>
       expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    await dynamodb
-      .put({
-        TableName: clientTableName,
-        Item: clientRecord,
-      })
-      .promise();
+    await createClient(clientRecord);
 
     // Return clientId and plain text secret (only shown once!)
     const response = {

@@ -192,7 +192,7 @@ export class UserAddressApiStack extends cdk.Stack {
         CLIENTS_TABLE: `user-address-clients-${env}`,
       },
       bundling: {
-        nodeModules: ['aws-sdk'],
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
@@ -293,7 +293,7 @@ export class UserAddressApiStack extends cdk.Stack {
         CLIENT_TABLE_NAME: this.clientsTable.tableName,
       },
       bundling: {
-        nodeModules: ['aws-sdk'],
+        nodeModules: ['@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb'],
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
